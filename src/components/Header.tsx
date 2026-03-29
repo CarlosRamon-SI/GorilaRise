@@ -1,10 +1,7 @@
-
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X, User, LogOut } from 'lucide-react';
-import GorilaRiseLogo from '@/components/GorilaRiseLogo';
-import TestModal from '@/components/TestModal';
 
 interface HeaderProps {
   isLoggedIn?: boolean;
@@ -15,164 +12,147 @@ interface HeaderProps {
 const Header = ({ isLoggedIn = false, userName, onLogout }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
-
-  const handleLogin = () => {
-    navigate('/login');
-  };
+  const { pathname } = useLocation();
 
   const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
-    }
+    if (onLogout) onLogout();
     navigate('/');
   };
+
+  const navLink = (to: string, label: string) => (
+    <Link
+      to={to}
+      className={`text-sm font-medium transition-colors hover:text-gorila-yellow ${
+        pathname === to ? 'text-gorila-yellow' : 'text-white'
+      }`}
+    >
+      {label}
+    </Link>
+  );
 
   return (
     <header className="bg-gorila-primary text-white shadow-lg sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
+
           {/* Logo */}
-          <Link to="/" className="flex items-center">
-            <GorilaRiseLogo size="sm" className="text-white" />
+          <Link to="/" className="flex items-center gap-2 shrink-0">
+            <div className="w-9 h-9 rounded-md overflow-hidden" style={{ backgroundColor: '#1a1718' }}>
+              <img
+                src="/lovable-uploads/b1d0c406-fb12-494e-ad8c-a0ad4760dda0.png"
+                alt="Gorila Rise"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <span className="font-bold text-white tracking-wide hidden sm:block">Gorila Rise</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link to="/loja" className="hover:text-gorila-yellow transition-colors">
-              Loja
-            </Link>
-            <Link to="/clube-vantagens" className="hover:text-gorila-yellow transition-colors">
-              Clube de Vantagens
-            </Link>
-            <Link to="/institucional" className="hover:text-gorila-yellow transition-colors">
-              Institucional
-            </Link>
-            <TestModal />
-            <Link to="/cadastro" className="hover:text-gorila-yellow transition-colors">
-              Entre para o Bando
-            </Link>
+          <nav className="hidden md:flex items-center gap-7">
+            {navLink('/loja', 'Loja')}
+            {navLink('/clube-vantagens', 'Clube de Vantagens')}
+            {navLink('/institucional', 'Institucional')}
           </nav>
 
-          {/* Auth Section */}
-          <div className="hidden md:flex items-center space-x-4">
+          {/* Desktop Actions */}
+          <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
-              <div className="flex items-center space-x-3">
-                <Link to="/painel" className="flex items-center space-x-2 hover:text-gorila-yellow transition-colors">
-                  <User size={18} />
+              <>
+                <Link
+                  to="/painel"
+                  className="flex items-center gap-1.5 text-sm hover:text-gorila-yellow transition-colors"
+                >
+                  <User size={16} />
                   <span>{userName || 'Atleta'}</span>
                 </Link>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleLogout}
-                  className="text-white hover:text-gorila-yellow hover:bg-transparent"
+                  className="text-white hover:text-gorila-yellow hover:bg-transparent p-1"
                 >
-                  <LogOut size={18} />
+                  <LogOut size={16} />
                 </Button>
-              </div>
+              </>
             ) : (
-              <Button
-                onClick={handleLogin}
-                className="bg-gorila-yellow text-gorila-primary hover:bg-yellow-400 font-semibold flex items-center space-x-2"
-              >
-                <div 
-                  className="w-6 h-6 rounded-sm flex items-center justify-center"
-                  style={{ backgroundColor: '#231f20' }}
-                >
-                  <img 
-                    src="/lovable-uploads/d8fcfed9-be47-4374-9285-717ea998ee5c.png" 
-                    alt="Gorila Rise" 
-                    className="w-4 h-4 object-contain"
-                  />
-                </div>
-                <span>Área do Atleta</span>
-              </Button>
+              <>
+                <Link to="/cadastro">
+                  <Button className="bg-gorila-yellow text-gorila-primary hover:bg-yellow-400 font-bold text-sm px-4">
+                    Entre para o Bando
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button variant="outline" className="bg-transparent border-white text-white hover:bg-white hover:text-gorila-primary font-semibold text-sm px-4 flex items-center gap-1.5">
+                    <User size={15} />
+                    Área do Atleta
+                  </Button>
+                </Link>
+              </>
             )}
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
+          <button className="md:hidden p-1" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-700">
-            <nav className="flex flex-col space-y-3">
-              <Link
-                to="/loja"
-                className="hover:text-gorila-yellow transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Loja
-              </Link>
-              <Link
-                to="/clube-vantagens"
-                className="hover:text-gorila-yellow transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Clube de Vantagens
-              </Link>
-              <Link
-                to="/institucional"
-                className="hover:text-gorila-yellow transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Institucional
-              </Link>
-              <div className="py-2">
-                <TestModal />
-              </div>
-              <Link
-                to="/cadastro"
-                className="hover:text-gorila-yellow transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Entre para o Bando
-              </Link>
-              <div className="pt-3 border-t border-gray-700">
-                {isLoggedIn ? (
-                  <div className="flex flex-col space-y-2">
-                    <Link
-                      to="/painel"
-                      className="flex items-center space-x-2 hover:text-gorila-yellow transition-colors"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <User size={18} />
-                      <span>{userName || 'Painel do Atleta'}</span>
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center space-x-2 hover:text-gorila-yellow transition-colors text-left"
-                    >
-                      <LogOut size={18} />
-                      <span>Sair</span>
-                    </button>
-                  </div>
-                ) : (
-                  <Button
-                    onClick={handleLogin}
-                    className="w-full bg-gorila-yellow text-gorila-primary hover:bg-yellow-400 font-semibold flex items-center justify-center space-x-2"
-                  >
-                    <div 
-                      className="w-6 h-6 rounded-sm flex items-center justify-center"
-                      style={{ backgroundColor: '#231f20' }}
-                    >
-                      <img 
-                        src="/lovable-uploads/d8fcfed9-be47-4374-9285-717ea998ee5c.png" 
-                        alt="Gorila Rise" 
-                        className="w-4 h-4 object-contain"
-                      />
-                    </div>
-                    <span>Área do Atleta</span>
-                  </Button>
-                )}
-              </div>
+          <div className="md:hidden py-4 border-t border-white/10 flex flex-col gap-4">
+            <nav className="flex flex-col gap-3">
+              {[
+                ['/loja', 'Loja'],
+                ['/clube-vantagens', 'Clube de Vantagens'],
+                ['/institucional', 'Institucional'],
+              ].map(([to, label]) => (
+                <Link
+                  key={to}
+                  to={to}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`text-sm font-medium transition-colors hover:text-gorila-yellow ${
+                    pathname === to ? 'text-gorila-yellow' : 'text-white'
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
             </nav>
+            <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
+              {isLoggedIn ? (
+                <>
+                  <Link
+                    to="/painel"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-2 text-sm hover:text-gorila-yellow transition-colors"
+                  >
+                    <User size={16} />
+                    <span>{userName || 'Painel do Atleta'}</span>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 text-sm hover:text-gorila-yellow transition-colors text-left"
+                  >
+                    <LogOut size={16} />
+                    Sair
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link to="/cadastro" onClick={() => setIsMenuOpen(false)}>
+                    <Button className="w-full bg-gorila-yellow text-gorila-primary hover:bg-yellow-400 font-bold text-sm">
+                      Entre para o Bando
+                    </Button>
+                  </Link>
+                  <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                    <Button variant="outline" className="w-full bg-transparent border-white text-white hover:bg-white hover:text-gorila-primary font-semibold text-sm flex items-center gap-1.5">
+                      <User size={15} />
+                      Área do Atleta
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>
