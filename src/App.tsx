@@ -18,6 +18,7 @@ import SubscriptionSystem from "./components/SubscriptionSystem";
 import ExerciseList from "./components/ExerciseList";
 import ListaExercicios from "./components/ListaExercicios";
 import SportsDrills from "./components/SportsDrills";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />

@@ -28,7 +28,7 @@ const Header = ({ isLoggedIn = false, userName, onLogout }: HeaderProps) => {
   };
 
   return (
-    <header className="bg-gorila-primary text-white shadow-lg">
+    <header className="bg-gorila-primary text-white shadow-lg sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -85,7 +85,7 @@ const Header = ({ isLoggedIn = false, userName, onLogout }: HeaderProps) => {
                     className="w-4 h-4 object-contain"
                   />
                 </div>
-                <span>Login</span>
+                <span>Área do Atleta</span>
               </Button>
             )}
           </div>
@@ -168,7 +168,7 @@ const Header = ({ isLoggedIn = false, userName, onLogout }: HeaderProps) => {
                         className="w-4 h-4 object-contain"
                       />
                     </div>
-                    <span>Login</span>
+                    <span>Área do Atleta</span>
                   </Button>
                 )}
               </div>
