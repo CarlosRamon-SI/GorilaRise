@@ -26,12 +26,13 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const res = await api.post<{ usuario: { id: number; nome: string; email: string; role: 'MEMBRO' | 'ADMIN' }; token: string }>(
+      const res = await api.post<{ usuario: { id: number; nome: string; email: string; role: 'USUARIO' | 'TREINADOR' | 'ADMIN' }; token: string }>(
         '/auth/login',
         { email, senha }
       );
       login(res.token, res.usuario);
-      navigate('/painel');
+      const dest = res.usuario.role === 'ADMIN' || res.usuario.role === 'TREINADOR' ? '/admin' : '/painel'
+      navigate(dest)
     } catch (err: any) {
       setError(err.message ?? 'Erro ao fazer login. Tente novamente.');
     } finally {
