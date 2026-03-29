@@ -77,10 +77,9 @@ const Institucional = () => {
       
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gorila-primary mb-4">Institucional</h1>
+          <h1 className="text-4xl font-bold text-gorila-primary mb-4">O Clube</h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Conheça a estrutura, modalidades esportivas e projetos sociais do 
-            Esporte Clube Gorila Rise
+            Conheça as modalidades, projetos e a estrutura da Associação Esportiva e Cultural Gorila Rise
           </p>
         </div>
 
