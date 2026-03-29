@@ -22,6 +22,13 @@ import ScrollToTop from "./components/ScrollToTop";
 import { AuthProvider } from "./contexts/AuthContext";
 import OTeste from "./pages/OTeste";
 import RiseKids from "./pages/RiseKids";
+import AdminLayout from "./components/AdminLayout";
+import Dashboard from "./pages/admin/Dashboard";
+import Usuarios from "./pages/admin/Usuarios";
+import AdminModalidades from "./pages/admin/AdminModalidades";
+import AdminPlanos from "./pages/admin/AdminPlanos";
+import Matriculas from "./pages/admin/Matriculas";
+import Leads from "./pages/admin/Leads";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +56,15 @@ const App = () => (
           <Route path="/drills" element={<SportsDrills />} />
           <Route path="/o-teste" element={<OTeste />} />
           <Route path="/rise-kids" element={<RiseKids />} />
+          {/* Admin panel */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="usuarios" element={<Usuarios />} />
+            <Route path="modalidades" element={<AdminModalidades />} />
+            <Route path="planos" element={<AdminPlanos />} />
+            <Route path="matriculas" element={<Matriculas />} />
+            <Route path="leads" element={<Leads />} />
+          </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

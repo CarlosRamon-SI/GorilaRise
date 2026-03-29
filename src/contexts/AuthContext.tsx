@@ -4,7 +4,7 @@ interface AuthUser {
   id: number
   nome: string
   email: string
-  role: 'MEMBRO' | 'ADMIN'
+  role: 'USUARIO' | 'TREINADOR' | 'ADMIN'
 }
 
 interface AuthContextType {

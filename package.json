@@ -79,5 +79,18 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
     "vite": "^5.4.1"
-  }
+  },
+  "description": "**URL**: https://lovable.dev/projects/57567dde-72bb-48bc-9b0b-8d6c65012779",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dayron65/gorila-rise-hub.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dayron65/gorila-rise-hub/issues"
+  },
+  "homepage": "https://github.com/dayron65/gorila-rise-hub#readme"
 }
