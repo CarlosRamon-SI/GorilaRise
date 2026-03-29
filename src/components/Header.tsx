@@ -112,7 +112,7 @@ const Header = ({ isLoggedIn = false, userName, onLogout }: HeaderProps) => {
             </div>
 
             {navLink('/clube-vantagens', 'Clube de Vantagens')}
-            {navLink('/o-clube', 'O Clube')}
+            {navLink('/a-associacao', 'A Associação')}
           </nav>
 
           {/* Desktop Actions */}
@@ -155,7 +155,7 @@ const Header = ({ isLoggedIn = false, userName, onLogout }: HeaderProps) => {
           <div className="md:hidden py-4 border-t border-white/10 flex flex-col gap-4">
             <nav className="flex flex-col gap-1">
               {['/', '/loja', '/clube-vantagens', '/institucional'].map((to) => {
-                const labels: Record<string, string> = { '/': 'Início', '/loja': 'Loja', '/clube-vantagens': 'Clube de Vantagens', '/o-clube': 'O Clube' };
+                const labels: Record<string, string> = { '/': 'Início', '/loja': 'Loja', '/clube-vantagens': 'Clube de Vantagens', '/a-associacao': 'A Associação' };
                 return (
                   <Link key={to} to={to} onClick={() => setIsMenuOpen(false)}
                     className={`text-sm font-medium py-2 transition-colors hover:text-gorila-yellow ${pathname === to ? 'text-gorila-yellow' : 'text-white'}`}>
