@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X, User, LogOut, ChevronDown, Heart, Zap } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface HeaderProps {
   isLoggedIn?: boolean;
@@ -9,14 +10,15 @@ interface HeaderProps {
   onLogout?: () => void;
 }
 
-const Header = ({ isLoggedIn = false, userName, onLogout }: HeaderProps) => {
+const Header = (_props: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [projetosOpen, setProjetosOpen] = useState(false);
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { user, isLoggedIn, logout } = useAuth();
 
   const handleLogout = () => {
-    if (onLogout) onLogout();
+    logout();
     navigate('/');
   };
 
@@ -121,7 +123,7 @@ const Header = ({ isLoggedIn = false, userName, onLogout }: HeaderProps) => {
               <>
                 <Link to="/painel" className="flex items-center gap-1.5 text-sm hover:text-gorila-yellow transition-colors">
                   <User size={16} />
-                  <span>{userName || 'Atleta'}</span>
+                  <span>{user?.nome || 'Atleta'}</span>
                 </Link>
                 <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:text-gorila-yellow hover:bg-transparent p-1">
                   <LogOut size={16} />
@@ -183,7 +185,7 @@ const Header = ({ isLoggedIn = false, userName, onLogout }: HeaderProps) => {
               {isLoggedIn ? (
                 <>
                   <Link to="/painel" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-2 text-sm hover:text-gorila-yellow transition-colors">
-                    <User size={16} /><span>{userName || 'Painel do Atleta'}</span>
+                    <User size={16} /><span>{user?.nome || 'Painel do Atleta'}</span>
                   </Link>
                   <button onClick={handleLogout} className="flex items-center gap-2 text-sm hover:text-gorila-yellow transition-colors text-left">
                     <LogOut size={16} />Sair

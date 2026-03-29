@@ -19,13 +19,15 @@ import ExerciseList from "./components/ExerciseList";
 import ListaExercicios from "./components/ListaExercicios";
 import SportsDrills from "./components/SportsDrills";
 import ScrollToTop from "./components/ScrollToTop";
+import { AuthProvider } from "./contexts/AuthContext";
 import OTeste from "./pages/OTeste";
 import RiseKids from "./pages/RiseKids";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <AuthProvider>
+    <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -53,6 +55,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+    </AuthProvider>
 );
 
 export default App;

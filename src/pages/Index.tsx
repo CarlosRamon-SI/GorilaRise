@@ -13,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
 const Index = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifForm, setNotifForm] = useState({ nome: '', email: '', whatsapp: '' });
   const [notifSent, setNotifSent] = useState(false);
@@ -71,7 +70,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header isLoggedIn={isLoggedIn} onLogout={() => setIsLoggedIn(false)} />
+      <Header />
       
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-gorila-primary to-gorila-dark text-white min-h-[calc(100vh-64px)] flex items-center">
