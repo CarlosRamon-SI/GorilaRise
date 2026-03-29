@@ -19,6 +19,8 @@ import ExerciseList from "./components/ExerciseList";
 import ListaExercicios from "./components/ListaExercicios";
 import SportsDrills from "./components/SportsDrills";
 import ScrollToTop from "./components/ScrollToTop";
+import OTeste from "./pages/OTeste";
+import RiseKids from "./pages/RiseKids";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,8 @@ const App = () => (
           <Route path="/exercicios" element={<ExerciseList />} />
           <Route path="/lista-exercicios" element={<ListaExercicios />} />
           <Route path="/drills" element={<SportsDrills />} />
+          <Route path="/o-teste" element={<OTeste />} />
+          <Route path="/rise-kids" element={<RiseKids />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, LogOut } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface HeaderProps {
   isLoggedIn?: boolean;
@@ -50,6 +51,19 @@ const Header = ({ isLoggedIn = false, userName, onLogout }: HeaderProps) => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-7">
             {navLink('/loja', 'Loja')}
+            <DropdownMenu>
+              <DropdownMenuTrigger className={`flex items-center gap-1 text-sm font-medium transition-colors hover:text-gorila-yellow outline-none ${pathname.startsWith('/rise-kids') || pathname.startsWith('/o-teste') ? 'text-gorila-yellow' : 'text-white'}`}>
+                Projetos <ChevronDown size={14} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[180px]">
+                <DropdownMenuItem asChild>
+                  <Link to="/rise-kids" className="cursor-pointer">Rise Kids</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/o-teste" className="cursor-pointer">O Teste — Seleção de Atletas</Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {navLink('/clube-vantagens', 'Clube de Vantagens')}
             {navLink('/institucional', 'Institucional')}
           </nav>
@@ -103,6 +117,8 @@ const Header = ({ isLoggedIn = false, userName, onLogout }: HeaderProps) => {
             <nav className="flex flex-col gap-3">
               {[
                 ['/loja', 'Loja'],
+                ['/rise-kids', 'Projetos — Rise Kids'],
+                ['/o-teste', 'Projetos — O Teste'],
                 ['/clube-vantagens', 'Clube de Vantagens'],
                 ['/institucional', 'Institucional'],
               ].map(([to, label]) => (
