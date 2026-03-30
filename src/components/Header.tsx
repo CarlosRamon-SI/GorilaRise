@@ -76,6 +76,7 @@ const Header = (_props: HeaderProps) => {
           <nav className="hidden md:flex items-center gap-7">
             {navLink('/', 'Início')}
             {navLink('/loja', 'Loja')}
+            {navLink('/planos', 'Planos')}
 
             {/* Projetos Dropdown */}
             <div className="relative" onMouseEnter={() => setProjetosOpen(true)} onMouseLeave={() => setProjetosOpen(false)}>
@@ -204,8 +205,8 @@ const Header = (_props: HeaderProps) => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-white/10 flex flex-col gap-4">
             <nav className="flex flex-col gap-1">
-              {['/', '/loja', '/clube-vantagens', '/a-associacao'].map((to) => {
-                const labels: Record<string, string> = { '/': 'Início', '/loja': 'Loja', '/clube-vantagens': 'Clube de Vantagens', '/a-associacao': 'A Associação' };
+              {['/', '/loja', '/planos', '/clube-vantagens', '/a-associacao'].map((to) => {
+                const labels: Record<string, string> = { '/': 'Início', '/loja': 'Loja', '/planos': 'Planos', '/clube-vantagens': 'Clube de Vantagens', '/a-associacao': 'A Associação' };
                 return (
                   <Link key={to} to={to} onClick={() => setIsMenuOpen(false)}
                     className={`text-sm font-medium py-2 transition-colors hover:text-gorila-yellow ${pathname === to ? 'text-gorila-yellow' : 'text-white'}`}>

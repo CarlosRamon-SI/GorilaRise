@@ -20,7 +20,8 @@ import ListaExercicios from "./components/ListaExercicios";
 import SportsDrills from "./components/SportsDrills";
 import ScrollToTop from "./components/ScrollToTop";
 import { AuthProvider } from "./contexts/AuthContext";
-import OTeste from "./pages/OTeste";
+import OTeste from "./pages/OTeste"
+import Planos from "./pages/Planos";
 import RiseKids from "./pages/RiseKids";
 import AdminLayout from "./components/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
@@ -59,6 +60,7 @@ const App = () => (
           <Route path="/drills" element={<SportsDrills />} />
           <Route path="/o-teste" element={<OTeste />} />
           <Route path="/rise-kids" element={<RiseKids />} />
+          <Route path="/planos" element={<Planos />} />
           {/* Admin panel */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
