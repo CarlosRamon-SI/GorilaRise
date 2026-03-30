@@ -25,10 +25,11 @@ const navItems = [
 ]
 
 export default function AdminLayout() {
-  const { user, isLoggedIn, logout } = useAuth()
+  const { user, isLoggedIn, loading, logout } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
+    if (loading) return
     if (!isLoggedIn) {
       navigate('/login', { replace: true })
       return
@@ -36,8 +37,9 @@ export default function AdminLayout() {
     if (user?.role === 'USUARIO') {
       navigate('/painel', { replace: true })
     }
-  }, [isLoggedIn, user, navigate])
+  }, [loading, isLoggedIn, user, navigate])
 
+  if (loading) return null
   if (!isLoggedIn || user?.role === 'USUARIO') return null
 
   return (

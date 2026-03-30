@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, LogOut, ChevronDown, Heart, Zap, Users, Music, BookOpen, Leaf, Star, Globe } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown, Heart, Zap, Users, Music, BookOpen, Leaf, Star, Globe, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
 
@@ -161,10 +161,18 @@ const Header = (_props: HeaderProps) => {
           <div className="hidden md:flex items-center gap-3">
             {isLoggedIn ? (
               <>
-                <Link to="/painel" className="flex items-center gap-1.5 text-sm hover:text-gorila-yellow transition-colors">
-                  <User size={16} />
-                  <span>{user?.nome || 'Atleta'}</span>
-                </Link>
+                {user?.role === 'ADMIN' || user?.role === 'TREINADOR' ? (
+                  <Link to="/admin" className="flex items-center gap-1.5 text-sm hover:text-gorila-yellow transition-colors">
+                    <LayoutDashboard size={16} />
+                    <span>{user?.nome || 'Admin'}</span>
+                    <span className="text-[10px] font-bold bg-gorila-yellow text-gorila-primary px-1.5 py-0.5 rounded-full uppercase">{user.role}</span>
+                  </Link>
+                ) : (
+                  <Link to="/painel" className="flex items-center gap-1.5 text-sm hover:text-gorila-yellow transition-colors">
+                    <User size={16} />
+                    <span>{user?.nome || 'Atleta'}</span>
+                  </Link>
+                )}
                 <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:text-gorila-yellow hover:bg-transparent p-1">
                   <LogOut size={16} />
                 </Button>
@@ -233,8 +241,14 @@ const Header = (_props: HeaderProps) => {
             <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
               {isLoggedIn ? (
                 <>
-                  <Link to="/painel" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-2 text-sm hover:text-gorila-yellow transition-colors">
-                    <User size={16} /><span>{user?.nome || 'Painel do Atleta'}</span>
+                  <Link
+                    to={user?.role === 'ADMIN' || user?.role === 'TREINADOR' ? '/admin' : '/painel'}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-2 text-sm hover:text-gorila-yellow transition-colors">
+                    {user?.role === 'ADMIN' || user?.role === 'TREINADOR'
+                      ? <><LayoutDashboard size={16} /><span>{user?.nome}</span><span className="text-[10px] font-bold bg-gorila-yellow text-gorila-primary px-1.5 py-0.5 rounded-full uppercase">{user.role}</span></>
+                      : <><User size={16} /><span>{user?.nome || 'Painel do Atleta'}</span></>
+                    }
                   </Link>
                   <button onClick={handleLogout} className="flex items-center gap-2 text-sm hover:text-gorila-yellow transition-colors text-left">
                     <LogOut size={16} />Sair

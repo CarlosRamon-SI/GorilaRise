@@ -10,6 +10,7 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null
   isLoggedIn: boolean
+  loading: boolean
   login: (token: string, user: AuthUser) => void
   logout: () => void
 }
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const token = localStorage.getItem('gorila_token')
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('gorila_user')
       }
     }
+    setLoading(false)
   }, [])
 
   const login = (token: string, userData: AuthUser) => {
@@ -45,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
