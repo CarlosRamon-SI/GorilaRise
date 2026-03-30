@@ -28,7 +28,8 @@ import Usuarios from "./pages/admin/Usuarios";
 import AdminModalidades from "./pages/admin/AdminModalidades";
 import AdminPlanos from "./pages/admin/AdminPlanos";
 import Matriculas from "./pages/admin/Matriculas";
-import Leads from "./pages/admin/Leads";
+import Leads from "./pages/admin/Leads"
+import AdminProjetos from "./pages/admin/AdminProjetos";
 
 const queryClient = new QueryClient();
 
