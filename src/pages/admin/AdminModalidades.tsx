@@ -6,41 +6,42 @@ interface Modalidade {
   id: number
   nome: string
   descricao: string
-  categoria: 'combate' | 'coletivo' | 'individual' | 'artistico'
+  categoria: string
   ativa: boolean
 }
 
-const CATEGORIAS = ['combate', 'coletivo', 'individual', 'artistico'] as const
+const CATEGORIAS_PADRAO = ['combate', 'coletivo', 'individual', 'artistico']
 
-const blank = (): Omit<Modalidade, 'id' | 'ativa'> => ({
-  nome: '',
-  descricao: '',
-  categoria: 'combate',
-})
+const blank = () => ({ nome: '', descricao: '', categoria: 'combate' })
 
 export default function AdminModalidades() {
   const [items, setItems] = useState<Modalidade[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(blank())
+  const [categoriaCustom, setCategoriaCustom] = useState('')
   const [editId, setEditId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  function fetchAll() {
-    return api.get<Modalidade[]>('/modalidades')
-      .then(data => {
-        // também busca inativas para o admin
-        setItems(data)
-      })
-      .finally(() => setLoading(false))
-  }
+  // Categorias disponíveis = padrão + quaisquer novas já cadastradas
+  const categoriasExistentes = Array.from(
+    new Set([...CATEGORIAS_PADRAO, ...items.map(m => m.categoria)])
+  )
 
-  useEffect(() => { fetchAll() }, [])
+  const categoriaFinal = form.categoria === '__nova__' ? categoriaCustom.trim() : form.categoria
+
+  useEffect(() => {
+    api.get<Modalidade[]>('/modalidades')
+      .then(setItems)
+      .finally(() => setLoading(false))
+  }, [])
 
   function startEdit(m: Modalidade) {
+    const isCustom = !CATEGORIAS_PADRAO.includes(m.categoria)
     setEditId(m.id)
-    setForm({ nome: m.nome, descricao: m.descricao, categoria: m.categoria })
+    setForm({ nome: m.nome, descricao: m.descricao, categoria: isCustom ? '__nova__' : m.categoria })
+    setCategoriaCustom(isCustom ? m.categoria : '')
     setShowForm(true)
     setError('')
   }
@@ -49,19 +50,25 @@ export default function AdminModalidades() {
     setShowForm(false)
     setEditId(null)
     setForm(blank())
+    setCategoriaCustom('')
     setError('')
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    if (form.categoria === '__nova__' && !categoriaCustom.trim()) {
+      setError('Informe o nome da nova categoria.')
+      return
+    }
     setSaving(true)
     setError('')
     try {
+      const payload = { ...form, categoria: categoriaFinal }
       if (editId) {
-        const updated = await api.patch<Modalidade>(`/modalidades/${editId}`, form)
+        const updated = await api.patch<Modalidade>(`/modalidades/${editId}`, payload)
         setItems(prev => prev.map(x => x.id === editId ? updated : x))
       } else {
-        const created = await api.post<Modalidade>('/modalidades', form)
+        const created = await api.post<Modalidade>('/modalidades', payload)
         setItems(prev => [...prev, created])
       }
       cancelForm()
@@ -81,11 +88,14 @@ export default function AdminModalidades() {
     }
   }
 
-  const catColor: Record<string, string> = {
-    combate:    'bg-red-500/20 text-red-400 border-red-500/30',
-    coletivo:   'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    individual: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-    artistico:  'bg-pink-500/20 text-pink-400 border-pink-500/30',
+  const catColor = (cat: string) => {
+    const map: Record<string, string> = {
+      combate:    'bg-red-500/20 text-red-400 border-red-500/30',
+      coletivo:   'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      individual: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      artistico:  'bg-pink-500/20 text-pink-400 border-pink-500/30',
+    }
+    return map[cat] ?? 'bg-zinc-700 text-zinc-300 border-zinc-600'
   }
 
   return (
@@ -130,13 +140,27 @@ export default function AdminModalidades() {
               <label className="text-xs text-zinc-400 block mb-1">Categoria</label>
               <select
                 value={form.categoria}
-                onChange={e => setForm(f => ({ ...f, categoria: e.target.value as any }))}
+                onChange={e => {
+                  setForm(f => ({ ...f, categoria: e.target.value }))
+                  if (e.target.value !== '__nova__') setCategoriaCustom('')
+                }}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400"
               >
-                {CATEGORIAS.map(c => (
+                {categoriasExistentes.map(c => (
                   <option key={c} value={c} className="capitalize">{c}</option>
                 ))}
+                <option value="__nova__">+ Nova categoria...</option>
               </select>
+              {form.categoria === '__nova__' && (
+                <input
+                  required
+                  autoFocus
+                  value={categoriaCustom}
+                  onChange={e => setCategoriaCustom(e.target.value)}
+                  className="w-full mt-2 bg-zinc-800 border border-yellow-400/50 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400"
+                  placeholder="Nome da nova categoria"
+                />
+              )}
             </div>
           </div>
 
@@ -193,7 +217,7 @@ export default function AdminModalidades() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold">{m.nome}</h3>
-                  <span className={`text-xs border px-2 py-0.5 rounded-full capitalize ${catColor[m.categoria]}`}>
+                  <span className={`text-xs border px-2 py-0.5 rounded-full capitalize ${catColor(m.categoria)}`}>
                     {m.categoria}
                   </span>
                 </div>
