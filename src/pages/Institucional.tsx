@@ -6,12 +6,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Leaf, Users, Zap } from 'lucide-react';
 import { api } from '@/lib/api';
+import { Heart, Users, Music, BookOpen, Leaf, Star, Zap, Globe } from 'lucide-react';
 
 interface Modalidade {
   id: number;
   nome: string;
   descricao: string;
   categoria: string;
+}
+
+interface ProjetoSocial {
+  id: number;
+  titulo: string;
+  descricao: string;
+  icone: string;
+}
+
+const ICONE_MAP: Record<string, any> = {
+  heart: Heart, users: Users, music: Music,
+  book: BookOpen, leaf: Leaf, star: Star, zap: Zap, globe: Globe,
 }
 
 const catCor: Record<string, string> = {
@@ -33,6 +46,11 @@ const Institucional = () => {
   const { data: modalidades = [], isLoading } = useQuery<Modalidade[]>({
     queryKey: ['modalidades'],
     queryFn: () => api.get<Modalidade[]>('/modalidades'),
+  })
+
+  const { data: projetos = [], isLoading: loadingProjetos } = useQuery<ProjetoSocial[]>({
+    queryKey: ['projetos'],
+    queryFn: () => api.get<ProjetoSocial[]>('/projetos'),
   })
 
   return (
@@ -101,24 +119,44 @@ const Institucional = () => {
           </Link>
         </section>
 
-        {/* Projetos Culturais */}
+        {/* Projetos Sociais */}
         <section className="mb-16">
-          <h2 className="text-2xl font-bold text-gorila-primary mb-8">Projetos Culturais</h2>
-          <Card className="max-w-2xl">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                  <Zap size={20} className="text-orange-500" />
-                </div>
-                <CardTitle className="text-gorila-primary">Ponto de Fusão</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 text-sm leading-relaxed">
-                Promover a cultura hip-hop como ferramenta de transformação social, integrando seus quatro elementos fundamentais — DJ, MC, Breaking e Graffiti — para engajar jovens em atividades artísticas, educativas e comunitárias, reforçando identidade, crítica social e expressão criativa.
-              </p>
-            </CardContent>
-          </Card>
+          <h2 className="text-2xl font-bold text-gorila-primary mb-8">Projetos Sociais</h2>
+
+          {loadingProjetos && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="h-36 rounded-xl bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {!loadingProjetos && projetos.length === 0 && (
+            <p className="text-gray-400 text-sm">Nenhum projeto social cadastrado ainda.</p>
+          )}
+
+          {!loadingProjetos && projetos.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {projetos.map((p) => {
+                const IconComponent = ICONE_MAP[p.icone] ?? Heart
+                return (
+                  <Card key={p.id}>
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-gorila-yellow/20 flex items-center justify-center shrink-0">
+                          <IconComponent size={20} className="text-gorila-primary" />
+                        </div>
+                        <CardTitle className="text-gorila-primary">{p.titulo}</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-600 text-sm leading-relaxed">{p.descricao}</p>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
         </section>
 
         {/* Documentos */}
