@@ -9,6 +9,7 @@ import {
   ClipboardList,
   UserPlus,
   Heart,
+  FileText,
   LogOut,
 } from 'lucide-react'
 
@@ -20,6 +21,7 @@ const navItems = [
   { to: '/admin/matriculas', label: 'Matrículas', icon: ClipboardList },
   { to: '/admin/leads', label: 'Leads', icon: UserPlus },
   { to: '/admin/projetos', label: 'Proj. Sociais', icon: Heart },
+  { to: '/admin/documentos', label: 'Documentos', icon: FileText },
 ]
 
 export default function AdminLayout() {

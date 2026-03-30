@@ -30,6 +30,7 @@ import AdminPlanos from "./pages/admin/AdminPlanos";
 import Matriculas from "./pages/admin/Matriculas";
 import Leads from "./pages/admin/Leads"
 import AdminProjetos from "./pages/admin/AdminProjetos"
+import AdminDocumentos from "./pages/admin/AdminDocumentos"
 import ProjetoPage from "./pages/projetos/ProjetoPage";
 
 const queryClient = new QueryClient();
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="matriculas" element={<Matriculas />} />
             <Route path="leads" element={<Leads />} />
             <Route path="projetos" element={<AdminProjetos />} />
+            <Route path="documentos" element={<AdminDocumentos />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="/projetos/:slug" element={<ProjetoPage />} />

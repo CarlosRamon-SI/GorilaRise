@@ -48,6 +48,18 @@ const Institucional = () => {
     queryFn: () => api.get<Modalidade[]>('/modalidades'),
   })
 
+  interface Documento {
+    id: number
+    titulo: string
+    descricao?: string
+    fileUrl: string
+  }
+
+  const { data: documentos = [], isLoading: loadingDocs } = useQuery<Documento[]>({
+    queryKey: ['documentos'],
+    queryFn: () => api.get<Documento[]>('/documentos'),
+  })
+
   const { data: projetos = [], isLoading: loadingProjetos } = useQuery<ProjetoSocial[]>({
     queryKey: ['projetos'],
     queryFn: () => api.get<ProjetoSocial[]>('/projetos'),
@@ -168,23 +180,41 @@ const Institucional = () => {
         {/* Documentos */}
         <section className="mb-16">
           <h2 className="text-2xl font-bold text-gorila-primary mb-8">Documentos Oficiais</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
-            {[
-              { titulo: 'Estatuto Social', desc: 'Documento fundador da associação.' },
-              { titulo: 'Regimento Interno', desc: 'Normas de uso, direitos e deveres dos associados.' },
-            ].map((doc) => (
-              <Card key={doc.titulo} className="flex items-start gap-4 p-4">
-                <div className="w-10 h-10 rounded-lg bg-gorila-yellow/20 flex items-center justify-center shrink-0">
-                  <FileText size={18} className="text-gorila-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gorila-primary text-sm">{doc.titulo}</p>
-                  <p className="text-gray-500 text-xs mt-0.5">{doc.desc}</p>
-                  <span className="text-xs text-gray-400 mt-1 inline-block">Disponível em breve</span>
-                </div>
-              </Card>
-            ))}
-          </div>
+
+          {loadingDocs && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="h-20 rounded-xl bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {!loadingDocs && documentos.length === 0 && (
+            <p className="text-gray-400 text-sm">Nenhum documento publicado ainda.</p>
+          )}
+
+          {!loadingDocs && documentos.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+              {documentos.map((doc) => (
+                <a
+                  key={doc.id}
+                  href={doc.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-4 p-4 rounded-xl border border-gray-200 hover:border-gorila-yellow hover:shadow-sm transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-gorila-yellow/20 group-hover:bg-gorila-yellow/30 flex items-center justify-center shrink-0 transition-colors">
+                    <FileText size={18} className="text-gorila-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gorila-primary text-sm">{doc.titulo}</p>
+                    {doc.descricao && <p className="text-gray-500 text-xs mt-0.5">{doc.descricao}</p>}
+                    <span className="text-xs text-gorila-yellow font-medium mt-1 inline-block">Baixar PDF ↗</span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Valores */}
