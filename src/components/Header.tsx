@@ -1,8 +1,22 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, LogOut, ChevronDown, Heart, Zap } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown, Heart, Zap, Users, Music, BookOpen, Leaf, Star, Globe } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { api } from '@/lib/api';
+
+interface ProjetoSocial {
+  id: number;
+  titulo: string;
+  descricao: string;
+  icone: string;
+}
+
+const ICONE_MAP: Record<string, any> = {
+  heart: Heart, users: Users, music: Music,
+  book: BookOpen, leaf: Leaf, star: Star, zap: Zap, globe: Globe,
+}
 
 interface HeaderProps {
   isLoggedIn?: boolean;
@@ -16,6 +30,12 @@ const Header = (_props: HeaderProps) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { user, isLoggedIn, logout } = useAuth();
+
+  const { data: projetos = [] } = useQuery<ProjetoSocial[]>({
+    queryKey: ['projetos'],
+    queryFn: () => api.get<ProjetoSocial[]>('/projetos'),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const handleLogout = () => {
     logout();
@@ -85,6 +105,27 @@ const Header = (_props: HeaderProps) => {
                       </div>
                     </Link>
 
+                    {/* Projetos Sociais dinâmicos */}
+                    {projetos.map((p) => {
+                      const IconComp = ICONE_MAP[p.icone] ?? Heart
+                      return (
+                        <Link
+                          key={p.id}
+                          to="/a-associacao"
+                          onClick={() => setProjetosOpen(false)}
+                          className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors group"
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-yellow-500/10 flex items-center justify-center shrink-0 group-hover:bg-yellow-500/20 transition-colors">
+                            <IconComp size={18} className="text-yellow-400" />
+                          </div>
+                          <div>
+                            <p className="text-white font-semibold text-sm">{p.titulo}</p>
+                            <p className="text-gray-400 text-xs mt-0.5 leading-relaxed line-clamp-2">{p.descricao}</p>
+                          </div>
+                        </Link>
+                      )
+                    })}
+
                     {/* Divider */}
                     <div className="h-px bg-white/10 mx-1" />
 
@@ -94,7 +135,6 @@ const Header = (_props: HeaderProps) => {
                       onClick={() => setProjetosOpen(false)}
                       className="relative flex items-start gap-3 p-3 rounded-lg bg-gorila-yellow/10 hover:bg-gorila-yellow/20 border border-gorila-yellow/30 transition-colors group overflow-hidden"
                     >
-                      {/* Glow */}
                       <div className="absolute inset-0 bg-gradient-to-r from-gorila-yellow/5 to-transparent pointer-events-none" />
                       <div className="w-9 h-9 rounded-lg bg-gorila-yellow flex items-center justify-center shrink-0">
                         <Zap size={18} className="text-gorila-primary" fill="currentColor" />
@@ -156,7 +196,7 @@ const Header = (_props: HeaderProps) => {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-white/10 flex flex-col gap-4">
             <nav className="flex flex-col gap-1">
-              {['/', '/loja', '/clube-vantagens', '/institucional'].map((to) => {
+              {['/', '/loja', '/clube-vantagens', '/a-associacao'].map((to) => {
                 const labels: Record<string, string> = { '/': 'Início', '/loja': 'Loja', '/clube-vantagens': 'Clube de Vantagens', '/a-associacao': 'A Associação' };
                 return (
                   <Link key={to} to={to} onClick={() => setIsMenuOpen(false)}
@@ -173,6 +213,15 @@ const Header = (_props: HeaderProps) => {
                   className={`flex items-center gap-2 text-sm font-medium py-2 transition-colors hover:text-gorila-yellow ${pathname === '/rise-kids' ? 'text-gorila-yellow' : 'text-white'}`}>
                   <Heart size={14} className="text-purple-400" /> Rise Kids
                 </Link>
+                {projetos.map((p) => {
+                  const IconComp = ICONE_MAP[p.icone] ?? Heart
+                  return (
+                    <Link key={p.id} to="/a-associacao" onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center gap-2 text-sm font-medium py-2 transition-colors hover:text-gorila-yellow text-white">
+                      <IconComp size={14} className="text-yellow-400" /> {p.titulo}
+                    </Link>
+                  )
+                })}
                 <Link to="/o-teste" onClick={() => setIsMenuOpen(false)}
                   className={`flex items-center gap-2 text-sm font-bold py-2 transition-colors ${pathname === '/o-teste' ? 'text-gorila-yellow' : 'text-gorila-yellow/90'}`}>
                   <Zap size={14} fill="currentColor" /> O Teste
