@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import GorilaRiseLogo from '@/components/GorilaRiseLogo';
 import TestModal from '@/components/TestModal';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Users, Dumbbell, ShoppingBag, Gift, Building, MapPin, Clock, Bell, CheckCircle2 } from 'lucide-react';
@@ -16,11 +17,26 @@ const Index = () => {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifForm, setNotifForm] = useState({ nome: '', email: '', whatsapp: '' });
   const [notifSent, setNotifSent] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifError, setNotifError] = useState('');
 
-  const handleNotifSubmit = (e: React.FormEvent) => {
+  const handleNotifSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: integrar com backend / webhook
-    setNotifSent(true);
+    setNotifLoading(true);
+    setNotifError('');
+    try {
+      await api.post('/leads', {
+        nome: notifForm.nome,
+        email: notifForm.email,
+        whatsapp: notifForm.whatsapp || undefined,
+        origem: 'eventos',
+      });
+      setNotifSent(true);
+    } catch (err: any) {
+      setNotifError(err.message ?? 'Erro ao cadastrar. Tente novamente.');
+    } finally {
+      setNotifLoading(false);
+    }
   };
 
   const upcomingEvents = [
@@ -253,8 +269,9 @@ const Index = () => {
                   onChange={e => setNotifForm(f => ({ ...f, whatsapp: e.target.value }))}
                 />
               </div>
-              <Button type="submit" className="bg-gorila-primary hover:bg-gorila-dark text-white mt-2">
-                Quero receber notificações
+              {notifError && <p className="text-red-500 text-sm">{notifError}</p>}
+              <Button type="submit" disabled={notifLoading} className="bg-gorila-primary hover:bg-gorila-dark text-white mt-2">
+                {notifLoading ? 'Cadastrando...' : 'Quero receber notificações'}
               </Button>
             </form>
           )}
