@@ -18,6 +18,9 @@ interface Modalidade { id: number; nome: string; categoria: string }
 interface Plano { id: number; nome: string; valor: string }
 
 const Cadastro = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const planoIdInicial = String((location.state as any)?.planoId ?? '');
   const [formData, setFormData] = useState({
     nome: '', email: '', cpf: '', telefone: '', nascimento: '',
     endereco: '', cidade: '', cep: '', modalidadeId: '', planoId: planoIdInicial,
@@ -27,9 +30,6 @@ const Cadastro = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const planoIdInicial = String((location.state as any)?.planoId ?? '');
   const { login } = useAuth();
 
   const { data: modalidades = [] } = useQuery<Modalidade[]>({
