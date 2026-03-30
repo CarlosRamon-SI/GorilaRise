@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
-import { Users, ClipboardList, Layers, CreditCard, UserPlus } from 'lucide-react'
+import { Users, ClipboardList, Layers, CreditCard, UserPlus, Heart, FileText } from 'lucide-react'
 
 interface Stats {
   usuarios: number
@@ -8,14 +9,18 @@ interface Stats {
   modalidades: number
   planos: number
   leads: number
+  projetos: number
+  documentos: number
 }
 
 const statCards = (s: Stats) => [
-  { label: 'Usuários ativos', value: s.usuarios, icon: Users, color: 'text-blue-400' },
-  { label: 'Matrículas ativas', value: s.matriculas, icon: ClipboardList, color: 'text-green-400' },
-  { label: 'Modalidades', value: s.modalidades, icon: Layers, color: 'text-purple-400' },
-  { label: 'Planos', value: s.planos, icon: CreditCard, color: 'text-orange-400' },
-  { label: 'Leads', value: s.leads, icon: UserPlus, color: 'text-yellow-400' },
+  { label: 'Usuários ativos',   value: s.usuarios,   icon: Users,         color: 'text-blue-400',   to: '/admin/usuarios' },
+  { label: 'Matrículas ativas', value: s.matriculas,  icon: ClipboardList, color: 'text-green-400',  to: '/admin/matriculas' },
+  { label: 'Modalidades',       value: s.modalidades, icon: Layers,        color: 'text-purple-400', to: '/admin/modalidades' },
+  { label: 'Planos',            value: s.planos,      icon: CreditCard,    color: 'text-orange-400', to: '/admin/planos' },
+  { label: 'Leads',             value: s.leads,       icon: UserPlus,      color: 'text-yellow-400', to: '/admin/leads' },
+  { label: 'Projetos Sociais',  value: s.projetos,    icon: Heart,         color: 'text-pink-400',   to: '/admin/projetos' },
+  { label: 'Documentos',        value: s.documentos,  icon: FileText,      color: 'text-cyan-400',   to: '/admin/documentos' },
 ]
 
 export default function Dashboard() {
@@ -40,21 +45,22 @@ export default function Dashboard() {
       )}
 
       {!stats && !error && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          {Array.from({ length: 5 }).map((_, i) => (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 7 }).map((_, i) => (
             <div key={i} className="bg-zinc-900 rounded-xl p-6 animate-pulse h-28" />
           ))}
         </div>
       )}
 
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          {statCards(stats).map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="bg-zinc-900 rounded-xl p-6 border border-zinc-800">
-              <Icon size={22} className={`${color} mb-3`} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {statCards(stats).map(({ label, value, icon: Icon, color, to }) => (
+            <Link key={label} to={to}
+              className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 hover:border-zinc-600 transition-colors group">
+              <Icon size={22} className={`${color} mb-3 group-hover:scale-110 transition-transform`} />
               <p className="text-3xl font-bold">{value}</p>
               <p className="text-zinc-400 text-sm mt-1">{label}</p>
-            </div>
+            </Link>
           ))}
         </div>
       )}
