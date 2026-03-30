@@ -29,7 +29,8 @@ import AdminModalidades from "./pages/admin/AdminModalidades";
 import AdminPlanos from "./pages/admin/AdminPlanos";
 import Matriculas from "./pages/admin/Matriculas";
 import Leads from "./pages/admin/Leads"
-import AdminProjetos from "./pages/admin/AdminProjetos";
+import AdminProjetos from "./pages/admin/AdminProjetos"
+import ProjetoPage from "./pages/projetos/ProjetoPage";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,7 @@ const App = () => (
             <Route path="projetos" element={<AdminProjetos />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/projetos/:slug" element={<ProjetoPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

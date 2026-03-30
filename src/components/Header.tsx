@@ -111,7 +111,7 @@ const Header = (_props: HeaderProps) => {
                       return (
                         <Link
                           key={p.id}
-                          to="/a-associacao"
+                          to={`/projetos/${p.slug}`}
                           onClick={() => setProjetosOpen(false)}
                           className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors group"
                         >
@@ -216,7 +216,7 @@ const Header = (_props: HeaderProps) => {
                 {projetos.map((p) => {
                   const IconComp = ICONE_MAP[p.icone] ?? Heart
                   return (
-                    <Link key={p.id} to="/a-associacao" onClick={() => setIsMenuOpen(false)}
+                    <Link key={p.id} to={`/projetos/${p.slug}`} onClick={() => setIsMenuOpen(false)}
                       className="flex items-center gap-2 text-sm font-medium py-2 transition-colors hover:text-gorila-yellow text-white">
                       <IconComp size={14} className="text-yellow-400" /> {p.titulo}
                     </Link>

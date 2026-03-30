@@ -1,28 +1,36 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { Plus, Pencil, Check, X } from 'lucide-react'
+import { Plus, Pencil, Check, X, ExternalLink } from 'lucide-react'
 
 interface Projeto {
   id: number
   titulo: string
+  slug: string
+  subtitulo?: string
   descricao: string
+  conteudo?: string
+  imagemUrl?: string
   icone: string
   ativo: boolean
 }
 
-// Subconjunto de ícones do Lucide representados como emoji para simplicidade visual
 const ICONES = [
-  { value: 'heart',      label: '❤️  Coração' },
-  { value: 'users',      label: '👥 Pessoas' },
-  { value: 'music',      label: '🎵 Música' },
-  { value: 'book',       label: '📚 Educação' },
-  { value: 'leaf',       label: '🌿 Sustentabilidade' },
-  { value: 'star',       label: '⭐ Destaque' },
-  { value: 'zap',        label: '⚡ Energia' },
-  { value: 'globe',      label: '🌍 Comunidade' },
+  { value: 'heart',  label: '❤️  Coração' },
+  { value: 'users',  label: '👥 Pessoas' },
+  { value: 'music',  label: '🎵 Música' },
+  { value: 'book',   label: '📚 Educação' },
+  { value: 'leaf',   label: '🌿 Sustentabilidade' },
+  { value: 'star',   label: '⭐ Destaque' },
+  { value: 'zap',    label: '⚡ Energia' },
+  { value: 'globe',  label: '🌍 Comunidade' },
 ]
 
-const blank = () => ({ titulo: '', descricao: '', icone: 'heart' })
+const blank = () => ({
+  titulo: '', subtitulo: '', descricao: '',
+  conteudo: '', imagemUrl: '', icone: 'heart',
+})
+
+const BASE_URL = import.meta.env.VITE_SITE_URL ?? 'https://evo.adtecnologia.com.br'
 
 export default function AdminProjetos() {
   const [items, setItems] = useState<Projeto[]>([])
@@ -30,6 +38,7 @@ export default function AdminProjetos() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(blank())
   const [editId, setEditId] = useState<number | null>(null)
+  const [editSlug, setEditSlug] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -41,14 +50,24 @@ export default function AdminProjetos() {
 
   function startEdit(p: Projeto) {
     setEditId(p.id)
-    setForm({ titulo: p.titulo, descricao: p.descricao, icone: p.icone })
+    setEditSlug(p.slug)
+    setForm({
+      titulo: p.titulo,
+      subtitulo: p.subtitulo ?? '',
+      descricao: p.descricao,
+      conteudo: p.conteudo ?? '',
+      imagemUrl: p.imagemUrl ?? '',
+      icone: p.icone,
+    })
     setShowForm(true)
     setError('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function cancelForm() {
     setShowForm(false)
     setEditId(null)
+    setEditSlug('')
     setForm(blank())
     setError('')
   }
@@ -57,12 +76,18 @@ export default function AdminProjetos() {
     e.preventDefault()
     setSaving(true)
     setError('')
+    const payload = {
+      ...form,
+      imagemUrl: form.imagemUrl || undefined,
+      subtitulo: form.subtitulo || undefined,
+      conteudo: form.conteudo || undefined,
+    }
     try {
       if (editId) {
-        const updated = await api.patch<Projeto>(`/projetos/${editId}`, form)
+        const updated = await api.patch<Projeto>(`/projetos/${editId}`, payload)
         setItems(prev => prev.map(x => x.id === editId ? updated : x))
       } else {
-        const created = await api.post<Projeto>('/projetos', form)
+        const created = await api.post<Projeto>('/projetos', payload)
         setItems(prev => [...prev, created])
       }
       cancelForm()
@@ -90,62 +115,100 @@ export default function AdminProjetos() {
           <p className="text-zinc-400 text-sm">{items.length} projeto(s)</p>
         </div>
         {!showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-zinc-900 font-semibold text-sm px-4 py-2 rounded-lg transition-colors"
-          >
-            <Plus size={16} />
-            Novo projeto
+          <button onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-zinc-900 font-semibold text-sm px-4 py-2 rounded-lg transition-colors">
+            <Plus size={16} /> Novo projeto
           </button>
         )}
       </div>
 
+      {/* Formulário */}
       {showForm && (
-        <form onSubmit={submit} className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 mb-6 space-y-4">
-          <h2 className="font-semibold text-sm text-zinc-300 uppercase tracking-wider">
-            {editId ? 'Editar projeto' : 'Novo projeto'}
-          </h2>
+        <form onSubmit={submit} className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 mb-8 space-y-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-sm text-zinc-300 uppercase tracking-wider">
+              {editId ? 'Editar projeto' : 'Novo projeto'}
+            </h2>
+            {editId && editSlug && (
+              <a
+                href={`${BASE_URL}/projetos/${editSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-yellow-400 hover:text-yellow-300 transition-colors"
+              >
+                <ExternalLink size={13} /> Ver página
+              </a>
+            )}
+          </div>
 
           {error && <p className="text-red-400 text-sm">{error}</p>}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          {/* Linha 1 — título + ícone */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
               <label className="text-xs text-zinc-400 block mb-1">Título</label>
-              <input
-                required
-                value={form.titulo}
+              <input required value={form.titulo}
                 onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400"
-                placeholder="Ex: Ponto de Fusão"
-              />
+                placeholder="Ex: Ponto de Fusão" />
             </div>
             <div>
               <label className="text-xs text-zinc-400 block mb-1">Ícone</label>
-              <select
-                value={form.icone}
+              <select value={form.icone}
                 onChange={e => setForm(f => ({ ...f, icone: e.target.value }))}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400"
-              >
-                {ICONES.map(i => (
-                  <option key={i.value} value={i.value}>{i.label}</option>
-                ))}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400">
+                {ICONES.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
               </select>
             </div>
           </div>
 
+          {/* Subtítulo */}
           <div>
-            <label className="text-xs text-zinc-400 block mb-1">Descrição</label>
-            <textarea
-              required
-              rows={4}
-              value={form.descricao}
-              onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400 resize-none"
-              placeholder="Descreva o projeto social..."
-            />
+            <label className="text-xs text-zinc-400 block mb-1">Subtítulo <span className="text-zinc-600">(tagline)</span></label>
+            <input value={form.subtitulo}
+              onChange={e => setForm(f => ({ ...f, subtitulo: e.target.value }))}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400"
+              placeholder="Ex: Cultura hip-hop como transformação social" />
           </div>
 
-          <div className="flex gap-3 justify-end">
+          {/* Descrição curta */}
+          <div>
+            <label className="text-xs text-zinc-400 block mb-1">Descrição curta <span className="text-zinc-600">(usada nos cards)</span></label>
+            <textarea required rows={2} value={form.descricao}
+              onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400 resize-none"
+              placeholder="Resumo do projeto para exibição nos cards e navbar" />
+          </div>
+
+          {/* Divisor */}
+          <div className="border-t border-zinc-700 pt-4">
+            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-4">Conteúdo da página</p>
+
+            {/* Imagem */}
+            <div className="mb-4">
+              <label className="text-xs text-zinc-400 block mb-1">URL da imagem de capa <span className="text-zinc-600">(opcional)</span></label>
+              <input value={form.imagemUrl}
+                onChange={e => setForm(f => ({ ...f, imagemUrl: e.target.value }))}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400"
+                placeholder="https://..." />
+              {form.imagemUrl && (
+                <img src={form.imagemUrl} alt="preview" className="mt-2 h-24 rounded-lg object-cover border border-zinc-700" />
+              )}
+            </div>
+
+            {/* Conteúdo */}
+            <div>
+              <label className="text-xs text-zinc-400 block mb-1">
+                Conteúdo <span className="text-zinc-600">(separe parágrafos com linha em branco)</span>
+              </label>
+              <textarea rows={10} value={form.conteudo}
+                onChange={e => setForm(f => ({ ...f, conteudo: e.target.value }))}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400 resize-y font-mono leading-relaxed"
+                placeholder={"Primeiro parágrafo do projeto...\n\nSegundo parágrafo com mais detalhes...\n\nTerceiro parágrafo, etc."} />
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end pt-2">
             <button type="button" onClick={cancelForm}
               className="flex items-center gap-1.5 px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors">
               <X size={15} /> Cancelar
@@ -159,6 +222,7 @@ export default function AdminProjetos() {
         </form>
       )}
 
+      {/* Lista */}
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 2 }).map((_, i) => (
@@ -175,8 +239,16 @@ export default function AdminProjetos() {
             <div key={p.id}
               className={`bg-zinc-900 rounded-xl border p-5 flex items-start justify-between gap-4 ${p.ativo ? 'border-zinc-800' : 'border-zinc-800/40 opacity-60'}`}>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold mb-1">{p.titulo}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="font-semibold">{p.titulo}</p>
+                  <a href={`${BASE_URL}/projetos/${p.slug}`} target="_blank" rel="noopener noreferrer"
+                    className="text-zinc-500 hover:text-yellow-400 transition-colors">
+                    <ExternalLink size={13} />
+                  </a>
+                </div>
+                {p.subtitulo && <p className="text-yellow-400/70 text-xs mb-1">{p.subtitulo}</p>}
                 <p className="text-zinc-400 text-sm line-clamp-2">{p.descricao}</p>
+                <p className="text-zinc-600 text-xs mt-1">/{p.slug}</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button onClick={() => toggleAtivo(p)}

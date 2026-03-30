@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Leaf, Users, Zap } from 'lucide-react';
+import { FileText, Leaf, Users, Zap, ArrowRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Heart, Users, Music, BookOpen, Leaf, Star, Zap, Globe } from 'lucide-react';
 
@@ -150,7 +150,13 @@ const Institucional = () => {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-gray-600 text-sm leading-relaxed">{p.descricao}</p>
+                      <p className="text-gray-600 text-sm leading-relaxed mb-4">{p.descricao}</p>
+                      <Link
+                        to={`/projetos/${p.slug}`}
+                        className="inline-flex items-center gap-1 text-sm font-semibold text-gorila-primary hover:text-gorila-yellow transition-colors"
+                      >
+                        Saiba mais <ArrowRight size={14} />
+                      </Link>
                     </CardContent>
                   </Card>
                 )
