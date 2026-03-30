@@ -1,44 +1,40 @@
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Leaf, Users, Zap } from 'lucide-react';
+import { api } from '@/lib/api';
 
-// TODO: substituir por useQuery(() => fetch('/api/modalidades')) quando o painel admin estiver pronto
 interface Modalidade {
   id: number;
   nome: string;
   descricao: string;
-  categoria: 'combate' | 'coletivo' | 'individual' | 'artistico';
+  categoria: string;
 }
 
-const modalidades: Modalidade[] = [
-  { id: 1, nome: 'Atletismo', descricao: 'Corridas, saltos e arremessos em pista oficial.', categoria: 'individual' },
-  { id: 2, nome: 'Basquete', descricao: 'Quadra oficial para treinos e competições.', categoria: 'coletivo' },
-  { id: 3, nome: 'Boxe', descricao: 'Ring profissional com equipamentos de segurança.', categoria: 'combate' },
-  { id: 4, nome: 'Cheerleading', descricao: 'Modalidade artística com coreografias e acrobacias.', categoria: 'artistico' },
-  { id: 5, nome: 'Flag Futebol', descricao: 'Modalidade sem contato físico com foco em estratégia.', categoria: 'coletivo' },
-  { id: 6, nome: 'Futebol', descricao: 'Campo oficial para todas as categorias.', categoria: 'coletivo' },
-  { id: 7, nome: 'Levantamento de Peso Olímpico', descricao: 'Plataforma oficial com barras e anilhas olímpicas.', categoria: 'individual' },
-  { id: 8, nome: 'Natação', descricao: 'Piscina semiolímpica para todos os níveis.', categoria: 'individual' },
-];
-
-const categoriaLabel: Record<Modalidade['categoria'], string> = {
-  combate: 'Combate',
-  coletivo: 'Coletivo',
-  individual: 'Individual',
-  artistico: 'Artístico',
-};
-
-const categoriaCor: Record<Modalidade['categoria'], string> = {
-  combate: 'bg-red-100 text-red-700',
-  coletivo: 'bg-blue-100 text-blue-700',
+const catCor: Record<string, string> = {
+  combate:    'bg-red-100 text-red-700',
+  coletivo:   'bg-blue-100 text-blue-700',
   individual: 'bg-green-100 text-green-700',
-  artistico: 'bg-purple-100 text-purple-700',
+  artistico:  'bg-purple-100 text-purple-700',
 };
+
+function catLabel(cat: string) {
+  return cat.charAt(0).toUpperCase() + cat.slice(1)
+}
+
+function catStyle(cat: string) {
+  return catCor[cat] ?? 'bg-gray-100 text-gray-600'
+}
 
 const Institucional = () => {
+  const { data: modalidades = [], isLoading } = useQuery<Modalidade[]>({
+    queryKey: ['modalidades'],
+    queryFn: () => api.get<Modalidade[]>('/modalidades'),
+  })
+
   return (
     <div className="min-h-screen bg-white">
       <Header />
@@ -56,23 +52,36 @@ const Institucional = () => {
         {/* Modalidades */}
         <section className="mb-16">
           <h2 className="text-2xl font-bold text-gorila-primary mb-8">Modalidades</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {modalidades.map((m) => (
-              <Card key={m.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${categoriaCor[m.categoria]}`}>
-                      {categoriaLabel[m.categoria]}
+
+          {isLoading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-32 rounded-xl bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {!isLoading && modalidades.length === 0 && (
+            <p className="text-gray-400 text-sm">Nenhuma modalidade cadastrada ainda.</p>
+          )}
+
+          {!isLoading && modalidades.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {modalidades.map((m) => (
+                <Card key={m.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-fit ${catStyle(m.categoria)}`}>
+                      {catLabel(m.categoria)}
                     </span>
-                  </div>
-                  <CardTitle className="text-gorila-primary text-base">{m.nome}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-500 leading-relaxed">{m.descricao}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <CardTitle className="text-gorila-primary text-base mt-2">{m.nome}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-500 leading-relaxed">{m.descricao}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* CTA O Teste */}
