@@ -107,11 +107,6 @@ export default function Planos() {
           </div>
         )}
 
-        {/* Nota */}
-        <p className="text-center text-gray-400 text-sm mt-10">
-          Todos os planos incluem acesso ao aplicativo e suporte por WhatsApp.
-          Dúvidas? <a href="https://wa.me/55519" className="text-gorila-primary underline">Fale conosco</a>.
-        </p>
       </div>
 
       {/* CTA O Teste */}
