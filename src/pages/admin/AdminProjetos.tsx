@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { Plus, Pencil, Check, X, ExternalLink } from 'lucide-react'
+import { Plus, Pencil, Check, X, ExternalLink, Upload, Trash2 } from 'lucide-react'
 
 interface Projeto {
   id: number
@@ -40,6 +40,7 @@ export default function AdminProjetos() {
   const [editId, setEditId] = useState<number | null>(null)
   const [editSlug, setEditSlug] = useState('')
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -70,6 +71,30 @@ export default function AdminProjetos() {
     setEditSlug('')
     setForm(blank())
     setError('')
+  }
+
+
+  async function uploadImagem(file: File) {
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      const token = localStorage.getItem('gorila_token')
+      const BASE_API = import.meta.env.VITE_API_URL ?? 'https://pressticket.adtecnologia.com.br'
+      const res = await fetch(`${BASE_API}/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error ?? 'Erro no upload')
+      const BASE_API_URL = import.meta.env.VITE_API_URL ?? 'https://pressticket.adtecnologia.com.br'
+      setForm(f => ({ ...f, imagemUrl: `${BASE_API_URL}${data.url}` }))
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setUploading(false)
+    }
   }
 
   async function submit(e: React.FormEvent) {
@@ -186,13 +211,25 @@ export default function AdminProjetos() {
 
             {/* Imagem */}
             <div className="mb-4">
-              <label className="text-xs text-zinc-400 block mb-1">URL da imagem de capa <span className="text-zinc-600">(opcional)</span></label>
-              <input value={form.imagemUrl}
-                onChange={e => setForm(f => ({ ...f, imagemUrl: e.target.value }))}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400"
-                placeholder="https://..." />
-              {form.imagemUrl && (
-                <img src={form.imagemUrl} alt="preview" className="mt-2 h-24 rounded-lg object-cover border border-zinc-700" />
+              <label className="text-xs text-zinc-400 block mb-1">Imagem de capa <span className="text-zinc-600">(opcional — JPEG, PNG, WebP, máx 5MB)</span></label>
+              {form.imagemUrl ? (
+                <div className="relative w-fit">
+                  <img src={form.imagemUrl} alt="preview" className="h-32 rounded-lg object-cover border border-zinc-700" />
+                  <button type="button" onClick={() => setForm(f => ({ ...f, imagemUrl: '' }))}
+                    className="absolute top-1 right-1 bg-zinc-900/80 hover:bg-red-600 p-1 rounded-md transition-colors">
+                    <Trash2 size={13} className="text-white" />
+                  </button>
+                </div>
+              ) : (
+                <label className={`flex items-center gap-3 w-full border-2 border-dashed rounded-lg px-4 py-5 cursor-pointer transition-colors ${uploading ? 'border-yellow-400/50 bg-yellow-400/5' : 'border-zinc-700 hover:border-zinc-500'}`}>
+                  <Upload size={18} className={uploading ? 'text-yellow-400 animate-bounce' : 'text-zinc-500'} />
+                  <span className="text-sm text-zinc-400">
+                    {uploading ? 'Enviando...' : 'Clique para selecionar uma imagem'}
+                  </span>
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden"
+                    disabled={uploading}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadImagem(f) }} />
+                </label>
               )}
             </div>
 
