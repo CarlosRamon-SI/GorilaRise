@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -20,7 +20,7 @@ interface Plano { id: number; nome: string; valor: string }
 const Cadastro = () => {
   const [formData, setFormData] = useState({
     nome: '', email: '', cpf: '', telefone: '', nascimento: '',
-    endereco: '', cidade: '', cep: '', modalidadeId: '', planoId: '',
+    endereco: '', cidade: '', cep: '', modalidadeId: '', planoId: planoIdInicial,
     senha: '', confirmarSenha: '',
   });
   const [termos, setTermos] = useState(false);
@@ -28,6 +28,8 @@ const Cadastro = () => {
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const planoIdInicial = String((location.state as any)?.planoId ?? '');
   const { login } = useAuth();
 
   const { data: modalidades = [] } = useQuery<Modalidade[]>({
@@ -190,7 +192,7 @@ const Cadastro = () => {
                     </div>
                     <div>
                       <Label>Plano</Label>
-                      <Select onValueChange={v => handleChange('planoId', v)} required>
+                      <Select value={formData.planoId} onValueChange={v => handleChange('planoId', v)} required>
                         <SelectTrigger>
                           <SelectValue placeholder={planos.length ? 'Selecione' : 'Carregando...'} />
                         </SelectTrigger>
