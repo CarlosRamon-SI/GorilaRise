@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +7,8 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
 import PainelAtleta from "./pages/PainelAtleta";
+import PainelProfessor from "./pages/PainelProfessor";
+import PainelSocio from "./pages/PainelSocio";
 import Loja from "./pages/Loja";
 import ClubeVantagens from "./pages/ClubeVantagens";
 import FichaInscricao from "./pages/FichaInscricao";
@@ -23,6 +24,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 import OTeste from "./pages/OTeste"
 import Planos from "./pages/Planos";
 import RiseKids from "./pages/RiseKids";
+import AnjosDoEsporte from "./pages/AnjosDoEsporte";
+import PremiacoesPublicas from "./pages/PremiacoesPublicas";
 import AdminLayout from "./components/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Usuarios from "./pages/admin/Usuarios";
@@ -32,6 +35,14 @@ import Matriculas from "./pages/admin/Matriculas";
 import Leads from "./pages/admin/Leads"
 import AdminProjetos from "./pages/admin/AdminProjetos"
 import AdminDocumentos from "./pages/admin/AdminDocumentos"
+import Configuracoes from "./pages/admin/Configuracoes"
+import Funcionarios from "./pages/admin/Funcionarios"
+import Treinos from "./pages/admin/Treinos"
+import Notificacoes from "./pages/admin/Notificacoes"
+import Financeiro from "./pages/admin/Financeiro"
+import Premiacoes from "./pages/admin/Premiacoes"
+import Patrocinadores from "./pages/admin/Patrocinadores"
+import CheckinAdmin from "./pages/admin/CheckinAdmin"
 import ProjetoPage from "./pages/projetos/ProjetoPage";
 
 const queryClient = new QueryClient();
@@ -49,6 +60,8 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/painel" element={<PainelAtleta />} />
+          <Route path="/painel-professor" element={<PainelProfessor />} />
+          <Route path="/painel-socio" element={<PainelSocio />} />
           <Route path="/loja" element={<Loja />} />
           <Route path="/clube-vantagens" element={<ClubeVantagens />} />
           <Route path="/ficha-inscricao" element={<FichaInscricao />} />
@@ -61,18 +74,27 @@ const App = () => (
           <Route path="/o-teste" element={<OTeste />} />
           <Route path="/rise-kids" element={<RiseKids />} />
           <Route path="/planos" element={<Planos />} />
+          <Route path="/anjos-do-esporte" element={<AnjosDoEsporte />} />
+          <Route path="/premiacoes" element={<PremiacoesPublicas />} />
           {/* Admin panel */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="usuarios" element={<Usuarios />} />
+            <Route path="funcionarios" element={<Funcionarios />} />
             <Route path="modalidades" element={<AdminModalidades />} />
             <Route path="planos" element={<AdminPlanos />} />
             <Route path="matriculas" element={<Matriculas />} />
+            <Route path="treinos" element={<Treinos />} />
+            <Route path="checkin" element={<CheckinAdmin />} />
+            <Route path="financeiro" element={<Financeiro />} />
+            <Route path="notificacoes" element={<Notificacoes />} />
+            <Route path="premiacoes" element={<Premiacoes />} />
+            <Route path="patrocinadores" element={<Patrocinadores />} />
             <Route path="leads" element={<Leads />} />
             <Route path="projetos" element={<AdminProjetos />} />
             <Route path="documentos" element={<AdminDocumentos />} />
+            <Route path="configuracoes" element={<Configuracoes />} />
           </Route>
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="/projetos/:slug" element={<ProjetoPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

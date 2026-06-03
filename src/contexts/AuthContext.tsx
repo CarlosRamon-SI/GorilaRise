@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
+export type UserRole = 'USUARIO' | 'TREINADOR' | 'ADMIN' | 'PROFESSOR' | 'NUTRICIONISTA' | 'SOCIO_TORCEDOR'
+
 interface AuthUser {
   id: number
   nome: string
   email: string
-  role: 'USUARIO' | 'TREINADOR' | 'ADMIN'
+  role: UserRole
 }
 
 interface AuthContextType {

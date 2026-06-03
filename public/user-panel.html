@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel do Atleta — Gorila Rise (Mockup)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .tab-btn.active { background: #231f20; color: white; }
+    .menu-btn.active { background: #231f20; color: white; }
+    #clock { font-family: monospace; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-green-600 text-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-white text-green-600 font-bold flex items-center justify-center text-lg">
+          JD
+        </div>
+        <div>
+          <h1 class="text-xl font-bold">João da Silva</h1>
+          <p class="text-green-200 text-sm">Atleta Gorila Rise</p>
+        </div>
+      </div>
+      <button class="flex items-center gap-2 px-4 py-2 rounded hover:bg-green-700 transition-colors text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sair
+      </button>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+      <!-- Sidebar -->
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-lg border shadow-sm overflow-hidden">
+          <div class="px-4 py-3 border-b">
+            <h2 class="font-semibold text-gray-800">Menu do Atleta</h2>
+          </div>
+          <nav>
+            <button onclick="setMenu('ficha')" class="menu-btn active w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M3 10h18M3 14h12M3 18h8"/></svg>
+              Ficha de Treino
+            </button>
+            <button onclick="setMenu('anamnese')" class="menu-btn w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              Anamnese
+            </button>
+            <button onclick="setMenu('checkin')" class="menu-btn w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Check-in
+            </button>
+            <button onclick="setMenu('cartao')" class="menu-btn w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+              Cartão Associado
+            </button>
+            <button onclick="setMenu('recordes')" class="menu-btn w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+              Recordes Pessoais
+            </button>
+            <button onclick="setMenu('foto-inicial')" class="menu-btn w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              Foto Inicial
+            </button>
+            <button onclick="setMenu('foto-progresso')" class="menu-btn w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              Foto 24 Semanas
+            </button>
+            <button onclick="setMenu('cronometro')" class="menu-btn w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Cronômetro
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="lg:col-span-3">
+
+        <!-- Tabs -->
+        <div class="bg-white rounded-lg border shadow-sm mb-6 overflow-hidden">
+          <div class="grid grid-cols-5 border-b">
+            <button onclick="setTab('dashboard')" class="tab-btn active py-3 text-sm font-medium transition-colors hover:bg-gray-50">Dashboard</button>
+            <button onclick="setTab('treinos')" class="tab-btn py-3 text-sm font-medium transition-colors hover:bg-gray-50">Treinos</button>
+            <button onclick="setTab('progresso')" class="tab-btn py-3 text-sm font-medium transition-colors hover:bg-gray-50">Progresso</button>
+            <button onclick="setTab('cronometro-tab')" class="tab-btn py-3 text-sm font-medium transition-colors hover:bg-gray-50">Cronômetro</button>
+            <button onclick="setTab('dieta')" class="tab-btn py-3 text-sm font-medium transition-colors hover:bg-gray-50">Dieta</button>
+          </div>
+        </div>
+
+        <!-- Tab: Dashboard -->
+        <div id="tab-dashboard" class="tab-content active space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Check-in -->
+            <div class="bg-white rounded-lg border shadow-sm p-5">
+              <div class="flex items-center gap-2 mb-3">
+                <svg class="text-yellow-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
+                <span class="font-semibold text-gray-800">Check-in Hoje</span>
+              </div>
+              <p class="text-2xl font-bold text-green-600">✓ Confirmado</p>
+              <p class="text-sm text-gray-500 mt-1">Horário: 08:00 - 10:00</p>
+              <button class="w-full mt-4 bg-[#231f20] text-white py-2 rounded-md text-sm font-medium hover:bg-black transition-colors">
+                Alterar Horário
+              </button>
+            </div>
+
+            <!-- Próximo Treino -->
+            <div class="bg-white rounded-lg border shadow-sm p-5">
+              <div class="flex items-center gap-2 mb-3">
+                <svg class="text-yellow-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke-width="2"/><line x1="12" y1="12" x2="15" y2="14" stroke-width="2"/></svg>
+                <span class="font-semibold text-gray-800">Próximo Treino</span>
+              </div>
+              <p class="text-lg font-semibold">Treino de Peito</p>
+              <p class="text-sm text-gray-500 mt-1">4 exercícios • 45 min</p>
+              <span class="inline-block mt-3 bg-yellow-400 text-[#231f20] text-xs font-bold px-3 py-1 rounded-full">
+                Em andamento
+              </span>
+            </div>
+
+            <!-- Último Recorde -->
+            <div class="bg-white rounded-lg border shadow-sm p-5">
+              <div class="flex items-center gap-2 mb-3">
+                <svg class="text-yellow-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                <span class="font-semibold text-gray-800">Último Recorde</span>
+              </div>
+              <p class="text-lg font-semibold">Supino: 80kg</p>
+              <p class="text-sm text-gray-500 mt-1">Batido há 3 dias</p>
+              <p class="text-xs text-green-600 mt-1 font-medium">+5kg do recorde anterior</p>
+            </div>
+          </div>
+
+          <!-- Relógio -->
+          <div class="bg-white rounded-lg border shadow-sm p-6">
+            <h3 class="font-semibold text-gray-800 mb-4">Relógio Atual</h3>
+            <div class="text-center">
+              <div id="clock" class="text-5xl font-bold text-[#231f20] mb-3">00:00:00</div>
+              <div id="date" class="text-gray-500 text-lg"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Treinos -->
+        <div id="tab-treinos" class="tab-content space-y-4">
+          <div class="bg-white rounded-lg border shadow-sm p-6">
+            <h3 class="font-semibold text-gray-800 text-lg mb-1">Ficha de Treino Atual</h3>
+            <p class="text-sm text-gray-500 mb-5">Divisão ABC - Semana 3 de 4</p>
+            <div class="border rounded-lg p-4 space-y-3">
+              <h4 class="font-semibold text-[#231f20]">Treino A — Peito, Ombro e Tríceps</h4>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between items-center py-1 border-b border-gray-50">
+                  <span>Supino Reto</span>
+                  <span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">4x8-12</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-gray-50">
+                  <span>Inclinado com Halteres</span>
+                  <span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">3x10-15</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-gray-50">
+                  <span>Desenvolvimento</span>
+                  <span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">4x8-12</span>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                  <span>Tríceps Pulley</span>
+                  <span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-medium">3x12-15</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Progresso -->
+        <div id="tab-progresso" class="tab-content">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg border shadow-sm p-6">
+              <h3 class="font-semibold text-gray-800 mb-4">Foto Inicial</h3>
+              <div class="aspect-square bg-gray-100 rounded-lg flex items-center justify-center mb-4">
+                <svg class="text-gray-300" xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </div>
+              <button class="w-full border border-gray-200 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors">Upload da Foto</button>
+            </div>
+            <div class="bg-white rounded-lg border shadow-sm p-6">
+              <h3 class="font-semibold text-gray-800 mb-4">Foto 24 Semanas</h3>
+              <div class="aspect-square bg-gray-100 rounded-lg flex items-center justify-center mb-4">
+                <svg class="text-gray-300" xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </div>
+              <button class="w-full border border-gray-200 py-2 rounded-md text-sm hover:bg-gray-50 transition-colors">Upload da Foto</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Cronômetro -->
+        <div id="tab-cronometro-tab" class="tab-content">
+          <div class="bg-white rounded-lg border shadow-sm p-8 text-center space-y-6">
+            <h3 class="font-semibold text-gray-800 text-lg">Cronômetro</h3>
+            <div id="stopwatch" class="text-6xl font-mono font-bold text-[#231f20]">00:00:00</div>
+            <div class="flex justify-center gap-3">
+              <button onclick="swStart()" class="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors">Iniciar</button>
+              <button onclick="swPause()" class="bg-yellow-400 text-[#231f20] px-6 py-2 rounded-lg font-medium hover:bg-yellow-300 transition-colors">Pausar</button>
+              <button onclick="swReset()" class="border border-gray-200 px-6 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors">Zerar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Dieta -->
+        <div id="tab-dieta" class="tab-content">
+          <div class="bg-white rounded-lg border shadow-sm p-6 space-y-4">
+            <h3 class="font-semibold text-gray-800 text-lg">Prescrição de Dieta</h3>
+            <p class="text-sm text-gray-500">Dieta personalizada para <strong>João da Silva</strong></p>
+            <div class="grid grid-cols-3 gap-4 text-center">
+              <div class="bg-blue-50 rounded-lg p-4">
+                <p class="text-2xl font-bold text-blue-600">2400</p>
+                <p class="text-xs text-gray-500 mt-1">kcal / dia</p>
+              </div>
+              <div class="bg-green-50 rounded-lg p-4">
+                <p class="text-2xl font-bold text-green-600">180g</p>
+                <p class="text-xs text-gray-500 mt-1">Proteína</p>
+              </div>
+              <div class="bg-yellow-50 rounded-lg p-4">
+                <p class="text-2xl font-bold text-yellow-600">280g</p>
+                <p class="text-xs text-gray-500 mt-1">Carboidratos</p>
+              </div>
+            </div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between py-2 border-b"><span class="font-medium">Café da manhã</span><span class="text-gray-500">Ovos + aveia + fruta</span></div>
+              <div class="flex justify-between py-2 border-b"><span class="font-medium">Almoço</span><span class="text-gray-500">Frango + arroz + salada</span></div>
+              <div class="flex justify-between py-2 border-b"><span class="font-medium">Lanche pré-treino</span><span class="text-gray-500">Batata-doce + whey</span></div>
+              <div class="flex justify-between py-2"><span class="font-medium">Jantar</span><span class="text-gray-500">Peixe + legumes</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Clock
+    function tick() {
+      const now = new Date();
+      document.getElementById('clock').textContent = now.toLocaleTimeString('pt-BR');
+      document.getElementById('date').textContent = now.toLocaleDateString('pt-BR', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+    }
+    tick();
+    setInterval(tick, 1000);
+
+    // Tabs
+    function setTab(id) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + id).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    // Sidebar menu highlight
+    function setMenu(id) {
+      document.querySelectorAll('.menu-btn').forEach(el => el.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+    }
+
+    // Stopwatch
+    let swInterval = null, swMs = 0, swRunning = false;
+    function swFmt(ms) {
+      const s = Math.floor(ms / 1000), m = Math.floor(s / 60), h = Math.floor(m / 60);
+      return String(h).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0');
+    }
+    function swStart() {
+      if (swRunning) return;
+      swRunning = true;
+      const start = Date.now() - swMs;
+      swInterval = setInterval(() => {
+        swMs = Date.now() - start;
+        document.getElementById('stopwatch').textContent = swFmt(swMs);
+      }, 100);
+    }
+    function swPause() {
+      clearInterval(swInterval); swRunning = false;
+    }
+    function swReset() {
+      clearInterval(swInterval); swRunning = false; swMs = 0;
+      document.getElementById('stopwatch').textContent = '00:00:00';
+    }
+  </script>
+</body>
+</html>
