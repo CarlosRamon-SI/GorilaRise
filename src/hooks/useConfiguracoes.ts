@@ -60,7 +60,7 @@ export function useConfiguracoes() {
       .then(data => setConfig(prev => ({
         ...prev,
         ...data,
-        horarios: { ...prev.horarios, ...data.horarios },
+        horarios: { ...prev.horarios, ...(data.horarios ?? {}) },
       })))
       .catch(() => {/* mantém o padrão */})
   }, [])

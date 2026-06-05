@@ -19,6 +19,15 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()
+  } catch {
+    return true
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
@@ -26,13 +35,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem('gorila_token')
     const stored = localStorage.getItem('gorila_user')
-    if (token && stored) {
+    if (token && stored && !isTokenExpired(token)) {
       try {
         setUser(JSON.parse(stored))
       } catch {
         localStorage.removeItem('gorila_token')
         localStorage.removeItem('gorila_user')
       }
+    } else if (token || stored) {
+      localStorage.removeItem('gorila_token')
+      localStorage.removeItem('gorila_user')
     }
     setLoading(false)
   }, [])
