@@ -8,22 +8,30 @@ interface WOD {
   descricao: string
   data: string
   exercicios: string
+  autorNome: string | null
 }
 
 interface TreinoPrescrito {
   id: number
+  atletaId: number | null
   atletaNome: string
   titulo: string
   exercicios: string
   criadoEm: string
 }
 
+interface Atleta {
+  id: number
+  nome: string
+}
+
 const blankWOD = () => ({ titulo: '', descricao: '', data: new Date().toISOString().slice(0, 10), exercicios: '' })
-const blankTreino = () => ({ atletaNome: '', titulo: '', exercicios: '' })
+const blankTreino = () => ({ atletaId: '', titulo: '', exercicios: '' })
 
 export default function Treinos() {
   const [wods, setWods] = useState<WOD[]>([])
   const [treinos, setTreinos] = useState<TreinoPrescrito[]>([])
+  const [atletas, setAtletas] = useState<Atleta[]>([])
   const [loadingWod, setLoadingWod] = useState(true)
   const [loadingTreinos, setLoadingTreinos] = useState(true)
   const [showWodForm, setShowWodForm] = useState(false)
@@ -37,6 +45,7 @@ export default function Treinos() {
   useEffect(() => {
     api.get<WOD[]>('/treinos/wod').then(setWods).catch(() => {}).finally(() => setLoadingWod(false))
     api.get<TreinoPrescrito[]>('/treinos').then(setTreinos).catch(() => {}).finally(() => setLoadingTreinos(false))
+    api.get<Atleta[]>('/admin/usuarios?role=ATLETA').then(setAtletas).catch(() => {})
   }, [])
 
   async function saveWOD(e: React.FormEvent) {
@@ -51,8 +60,13 @@ export default function Treinos() {
 
   async function saveTreino(e: React.FormEvent) {
     e.preventDefault(); setSavingTreino(true); setError('')
+    if (!treinoForm.atletaId) { setError('Selecione um atleta.'); setSavingTreino(false); return }
     try {
-      const novo = await api.post<TreinoPrescrito>('/treinos', treinoForm)
+      const novo = await api.post<TreinoPrescrito>('/treinos', {
+        atletaId:   Number(treinoForm.atletaId),
+        titulo:     treinoForm.titulo,
+        exercicios: treinoForm.exercicios,
+      })
       setTreinos(prev => [novo, ...prev])
       setTreinoForm(blankTreino()); setShowTreinoForm(false)
     } catch (err: unknown) { setError(err instanceof Error ? err.message : 'Erro') }
@@ -138,10 +152,13 @@ export default function Treinos() {
             {wods.map(w => (
               <div key={w.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-start justify-between gap-4">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Zap size={14} className="text-yellow-400" />
                     <p className="font-semibold text-sm">{w.titulo}</p>
                     <span className="text-xs text-zinc-500">{new Date(w.data).toLocaleDateString('pt-BR')}</span>
+                    {w.autorNome && (
+                      <span className="text-xs text-zinc-600">por {w.autorNome}</span>
+                    )}
                   </div>
                   {w.exercicios && <p className="text-xs text-zinc-400 mt-1 font-mono">{w.exercicios}</p>}
                   {w.descricao && <p className="text-xs text-zinc-500 mt-1">{w.descricao}</p>}
@@ -167,12 +184,18 @@ export default function Treinos() {
 
         {showTreinoForm && (
           <form onSubmit={saveTreino} className="bg-zinc-900 border border-zinc-700 rounded-xl p-5 mb-4 space-y-3">
+            {error && <p className="text-red-400 text-sm">{error}</p>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-zinc-400 mb-1">Atleta (nome ou e-mail) <span className="text-red-400">*</span></label>
-                <input required value={treinoForm.atletaNome} onChange={e => setTreinoForm(p => ({ ...p, atletaNome: e.target.value }))}
-                  placeholder="ex: João Silva"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                <label className="block text-xs text-zinc-400 mb-1">Atleta <span className="text-red-400">*</span></label>
+                <select required value={treinoForm.atletaId}
+                  onChange={e => setTreinoForm(p => ({ ...p, atletaId: e.target.value }))}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                  <option value="">— selecione o atleta —</option>
+                  {atletas.map(a => (
+                    <option key={a.id} value={a.id}>{a.nome}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">Título do Treino <span className="text-red-400">*</span></label>

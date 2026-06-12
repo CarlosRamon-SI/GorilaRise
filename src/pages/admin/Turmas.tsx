@@ -1,0 +1,281 @@
+import { useEffect, useState } from 'react'
+import { api } from '@/lib/api'
+import { Plus, Pencil, Loader2, X, Power } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+
+interface Turma {
+  id: number
+  codigo: string
+  horario: string
+  dias: string[]
+  tipo: string
+  descricao?: string
+  faixaIdade?: string
+  capacidade: number
+  ativa: boolean
+}
+
+const DIAS_SEMANA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
+
+const BLANK = { codigo: '', horario: '', dias: [] as string[], tipo: 'regular', descricao: '', faixaIdade: '', capacidade: 6 }
+
+function ModalTurma({
+  turma, onClose, onSalvo,
+}: { turma?: Turma; onClose: () => void; onSalvo: (t: Turma) => void }) {
+  const [form, setForm] = useState(turma ? {
+    codigo: turma.codigo, horario: turma.horario, dias: turma.dias,
+    tipo: turma.tipo, descricao: turma.descricao ?? '', faixaIdade: turma.faixaIdade ?? '',
+    capacidade: turma.capacidade,
+  } : BLANK)
+  const [saving, setSaving] = useState(false)
+  const [erro, setErro] = useState('')
+
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', esc)
+    return () => document.removeEventListener('keydown', esc)
+  }, [onClose])
+
+  function toggleDia(dia: string) {
+    setForm(f => ({ ...f, dias: f.dias.includes(dia) ? f.dias.filter(d => d !== dia) : [...f.dias, dia] }))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setErro('')
+    if (form.dias.length === 0) return setErro('Selecione pelo menos um dia.')
+    setSaving(true)
+    try {
+      if (turma) {
+        const t = await api.patch<Turma>(`/admin/turmas/${turma.id}`, {
+          horario: form.horario, dias: form.dias, tipo: form.tipo,
+          descricao: form.descricao, faixaIdade: form.faixaIdade, capacidade: Number(form.capacidade),
+        })
+        onSalvo(t)
+      } else {
+        const t = await api.post<Turma>('/admin/turmas', {
+          codigo: form.codigo, horario: form.horario, dias: form.dias, tipo: form.tipo,
+          descricao: form.descricao, faixaIdade: form.faixaIdade, capacidade: Number(form.capacidade),
+        })
+        onSalvo(t)
+      }
+      onClose()
+    } catch (e: any) {
+      setErro(e.message ?? 'Erro ao salvar turma.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inp = 'w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gorila-yellow'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true"
+        className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            {turma ? <Pencil size={18} className="text-gorila-yellow" /> : <Plus size={18} className="text-gorila-yellow" />}
+            {turma ? 'Editar Turma' : 'Nova Turma'}
+          </h2>
+          <button onClick={onClose} className="text-zinc-500 hover:text-white"><X size={18} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Código</label>
+              <input type="text" value={form.codigo} onChange={e => setForm(f => ({ ...f, codigo: e.target.value }))}
+                className={inp} required autoFocus disabled={!!turma} placeholder="Ex: BJJM1" />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Horário</label>
+              <input type="text" value={form.horario} onChange={e => setForm(f => ({ ...f, horario: e.target.value }))}
+                className={inp} required placeholder="Ex: 07:00 – 08:00" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-zinc-400 mb-2 block">Dias da semana</label>
+            <div className="flex flex-wrap gap-2">
+              {DIAS_SEMANA.map(d => (
+                <button key={d} type="button" onClick={() => toggleDia(d)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                    form.dias.includes(d)
+                      ? 'bg-gorila-yellow/20 text-gorila-yellow border-gorila-yellow/40'
+                      : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:border-zinc-600'
+                  }`}>{d}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Tipo</label>
+              <select value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))} className={inp}>
+                <option value="regular">Regular</option>
+                <option value="kids">Kids</option>
+                <option value="competicao">Competição</option>
+                <option value="open">Open</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Capacidade</label>
+              <input type="number" min={1} value={form.capacidade}
+                onChange={e => setForm(f => ({ ...f, capacidade: Number(e.target.value) }))}
+                className={inp} />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-zinc-400 mb-1 block">Faixa etária</label>
+            <input type="text" value={form.faixaIdade} onChange={e => setForm(f => ({ ...f, faixaIdade: e.target.value }))}
+              className={inp} placeholder="Ex: 6–12 anos" />
+          </div>
+
+          <div>
+            <label className="text-xs text-zinc-400 mb-1 block">Descrição</label>
+            <textarea value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
+              className={`${inp} resize-none h-20`} placeholder="Descrição da turma…" />
+          </div>
+
+          {erro && <p className="text-red-400 text-xs">{erro}</p>}
+
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 py-2 rounded-lg bg-gorila-yellow text-gorila-primary font-bold text-sm hover:bg-yellow-300 transition-colors flex items-center justify-center gap-1 disabled:opacity-60">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : turma ? <Pencil size={14} /> : <Plus size={14} />}
+              {turma ? 'Salvar' : 'Criar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+export default function Turmas() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
+  const [turmas, setTurmas] = useState<Turma[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [novaModal, setNovaModal] = useState(false)
+  const [editando, setEditando] = useState<Turma | null>(null)
+  const [toggling, setToggling] = useState<number | null>(null)
+
+  useEffect(() => {
+    api.get<Turma[]>('/admin/turmas')
+      .then(setTurmas)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function toggleAtiva(t: Turma) {
+    if (!isAdmin) return
+    setToggling(t.id)
+    try {
+      const updated = await api.patch<Turma>(`/admin/turmas/${t.id}`, { ativa: !t.ativa })
+      setTurmas(prev => prev.map(x => x.id === t.id ? { ...x, ativa: updated.ativa } : x))
+    } catch (e: any) {
+      alert(e.message)
+    } finally {
+      setToggling(null)
+    }
+  }
+
+  function onSalvo(t: Turma) {
+    setTurmas(prev => {
+      const idx = prev.findIndex(x => x.id === t.id)
+      if (idx >= 0) return prev.map(x => x.id === t.id ? t : x)
+      return [...prev, t]
+    })
+  }
+
+  return (
+    <div className="px-4 py-5 md:p-8">
+      {novaModal && <ModalTurma onClose={() => setNovaModal(false)} onSalvo={onSalvo} />}
+      {editando && <ModalTurma turma={editando} onClose={() => setEditando(null)} onSalvo={onSalvo} />}
+
+      <div className="flex items-start justify-between mb-1">
+        <h1 className="text-2xl font-bold">Turmas</h1>
+        {isAdmin && (
+          <button onClick={() => setNovaModal(true)}
+            className="flex items-center gap-1.5 bg-gorila-yellow text-gorila-primary font-bold text-sm px-4 py-2 rounded-lg hover:bg-yellow-300 transition-colors">
+            <Plus size={15} /> Nova Turma
+          </button>
+        )}
+      </div>
+      <p className="text-zinc-400 text-sm mb-8">{turmas.length} turma(s) cadastrada(s)</p>
+
+      {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
+
+      {loading ? (
+        <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="bg-zinc-900 rounded-lg h-14 animate-pulse" />)}</div>
+      ) : turmas.length === 0 ? (
+        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-12 text-center text-zinc-400">
+          Nenhuma turma cadastrada.
+        </div>
+      ) : (
+        <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-x-auto">
+          <table className="w-full text-sm min-w-[580px]">
+            <thead>
+              <tr className="border-b border-zinc-800 text-zinc-400 text-left">
+                <th className="px-4 py-3 font-medium">Código</th>
+                <th className="px-4 py-3 font-medium">Horário</th>
+                <th className="px-4 py-3 font-medium">Dias</th>
+                <th className="px-4 py-3 font-medium">Tipo</th>
+                <th className="px-4 py-3 font-medium">Cap.</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                {isAdmin && <th className="px-4 py-3 font-medium">Ações</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {turmas.map((t) => (
+                <tr key={t.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
+                  <td className="px-4 py-3 font-mono font-medium">{t.codigo}</td>
+                  <td className="px-4 py-3 text-zinc-300">{t.horario}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {(Array.isArray(t.dias) ? t.dias : []).map(d => (
+                        <span key={d} className="text-xs bg-zinc-800 text-zinc-300 border border-zinc-700 px-1.5 py-0.5 rounded">{d}</span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-zinc-400 capitalize">{t.tipo}</td>
+                  <td className="px-4 py-3 text-zinc-400">{t.capacidade}</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                      t.ativa ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-zinc-700 text-zinc-400 border-zinc-600'
+                    }`}>{t.ativa ? 'Ativa' : 'Inativa'}</span>
+                  </td>
+                  {isAdmin && (
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setEditando(t)}
+                          className="flex items-center gap-1 text-xs text-zinc-400 hover:text-gorila-yellow transition-colors px-2 py-1 rounded hover:bg-zinc-800">
+                          <Pencil size={12} /> Editar
+                        </button>
+                        <button onClick={() => toggleAtiva(t)} disabled={toggling === t.id}
+                          className={`flex items-center gap-1 text-xs transition-colors px-2 py-1 rounded hover:bg-zinc-800 disabled:opacity-50 ${
+                            t.ativa ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'
+                          }`}>
+                          <Power size={12} />
+                          {toggling === t.id ? '…' : t.ativa ? 'Desativar' : 'Ativar'}
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}

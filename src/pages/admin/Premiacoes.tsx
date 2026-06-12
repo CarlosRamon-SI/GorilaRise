@@ -7,12 +7,15 @@ interface Premiacao {
   titulo: string
   descricao: string
   atletaNome: string
+  atletaId?: number | null
   data: string
   imagemUrl?: string
   ativo: boolean
 }
 
-const blank = () => ({ titulo: '', descricao: '', atletaNome: '', data: '', imagemUrl: '' })
+interface AtletaOpt { id: number; nome: string }
+
+const blank = () => ({ titulo: '', descricao: '', atletaNome: '', atletaId: '', data: '', imagemUrl: '' })
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'https://pressticket.adtecnologia.com.br'
 
@@ -26,17 +29,21 @@ export default function Premiacoes() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const [atletas, setAtletas] = useState<AtletaOpt[]>([])
 
   useEffect(() => {
     api.get<Premiacao[]>('/premiacoes')
       .then(setItems)
       .catch(() => {})
       .finally(() => setLoading(false))
+    api.get<AtletaOpt[]>('/admin/usuarios?role=ATLETA&ativo=true')
+      .then(setAtletas)
+      .catch(() => {})
   }, [])
 
   function startEdit(p: Premiacao) {
     setEditId(p.id)
-    setForm({ titulo: p.titulo, descricao: p.descricao, atletaNome: p.atletaNome, data: p.data, imagemUrl: p.imagemUrl ?? '' })
+    setForm({ titulo: p.titulo, descricao: p.descricao, atletaNome: p.atletaNome, atletaId: String(p.atletaId ?? ''), data: p.data, imagemUrl: p.imagemUrl ?? '' })
     setShowForm(true); setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -55,11 +62,15 @@ export default function Premiacoes() {
     e.preventDefault()
     setSaving(true); setError('')
     try {
+      const payload = {
+        ...form,
+        atletaId: form.atletaId ? Number(form.atletaId) : null,
+      }
       if (editId) {
-        const updated = await api.patch<Premiacao>(`/premiacoes/${editId}`, form)
+        const updated = await api.patch<Premiacao>(`/premiacoes/${editId}`, payload)
         setItems(prev => prev.map(p => p.id === editId ? updated : p))
       } else {
-        const novo = await api.post<Premiacao>('/premiacoes', form)
+        const novo = await api.post<Premiacao>('/premiacoes', payload)
         setItems(prev => [novo, ...prev])
       }
       cancelForm()
@@ -77,7 +88,7 @@ export default function Premiacoes() {
   }
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-5 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Premiações e Conquistas</h1>
@@ -104,7 +115,19 @@ export default function Premiacoes() {
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400" />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Atleta / Equipe</label>
+              <label className="block text-xs text-zinc-400 mb-1">Atleta (cadastrado)</label>
+              <select value={form.atletaId}
+                onChange={e => {
+                  const sel = atletas.find(a => String(a.id) === e.target.value)
+                  setForm(p => ({ ...p, atletaId: e.target.value, atletaNome: sel?.nome ?? p.atletaNome }))
+                }}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 text-white">
+                <option value="">Nenhum / externo</option>
+                {atletas.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Nome exibido (atleta / equipe)</label>
               <input value={form.atletaNome} onChange={e => setForm(p => ({ ...p, atletaNome: e.target.value }))}
                 placeholder="Nome do atleta ou equipe"
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400" />

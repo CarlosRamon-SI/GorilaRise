@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CheckCircle, Clock, Users, AlertCircle } from 'lucide-react'
+import { CheckCircle, Clock, Users, AlertCircle, History } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Turma {
@@ -15,10 +16,22 @@ interface Turma {
   checkedIn: boolean
 }
 
+interface HistoricoItem {
+  id: number; data: string; turma: string; horario: string; descricao: string
+}
+
 export default function TabCheckin() {
   const [turmas, setTurmas] = useState<Turma[]>([])
   const [loading, setLoading] = useState(true)
   const [actionId, setActionId] = useState<number | null>(null)
+  const [showHistorico, setShowHistorico] = useState(false)
+
+  const { data: historico = [] } = useQuery<HistoricoItem[]>({
+    queryKey: ['checkin-historico'],
+    queryFn: () => api.get('/checkin/historico'),
+    enabled: showHistorico,
+    retry: false,
+  })
 
   useEffect(() => {
     api.get<Turma[]>('/turmas')
@@ -140,6 +153,43 @@ export default function TabCheckin() {
           </Card>
         </>
       )}
+      {/* Histórico */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-gorila-primary text-sm font-semibold flex items-center gap-2">
+              <History size={15} /> Histórico (últimos 30 dias)
+            </CardTitle>
+            <Button size="sm" variant="outline" className="text-xs h-7"
+              onClick={() => setShowHistorico(v => !v)}>
+              {showHistorico ? 'Ocultar' : 'Ver histórico'}
+            </Button>
+          </div>
+        </CardHeader>
+        {showHistorico && (
+          <CardContent>
+            {historico.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-4">Nenhum check-in nos últimos 30 dias.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {historico.map(h => (
+                  <div key={h.id} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-100">
+                    <div>
+                      <p className="text-xs font-semibold text-gorila-primary">{h.descricao}</p>
+                      <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
+                        <Clock size={10} /> {h.horario} · Turma {h.turma}
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-gray-500 shrink-0 ml-2">
+                      {new Date(h.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
     </div>
   )
 }

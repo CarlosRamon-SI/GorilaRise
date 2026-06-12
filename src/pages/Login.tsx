@@ -26,13 +26,13 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const res = await api.post<{ usuario: { id: number; nome: string; email: string; role: 'USUARIO' | 'TREINADOR' | 'ADMIN' | 'PROFESSOR' | 'NUTRICIONISTA' | 'SOCIO_TORCEDOR' }; token: string }>(
+      const res = await api.post<{ usuario: { id: number; nome: string; email: string; role: 'ATLETA' | 'TREINADOR' | 'ADMIN' | 'SOCIO_TORCEDOR'; funcao?: 'PROFESSOR' | 'NUTRICIONISTA' | 'FISIOTERAPEUTA' }; token: string }>(
         '/auth/login',
         { email, senha }
       );
       login(res.token, res.usuario);
       const dest = res.usuario.role === 'ADMIN' ? '/admin'
-                 : res.usuario.role === 'TREINADOR' || res.usuario.role === 'PROFESSOR' ? '/painel-professor'
+                 : res.usuario.role === 'TREINADOR' ? '/painel-professor'
                  : res.usuario.role === 'SOCIO_TORCEDOR' ? '/painel-socio'
                  : '/painel'
       navigate(dest)

@@ -54,7 +54,7 @@ export default function Notificacoes() {
   }
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-5 md:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Notificações / Comunicados</h1>
         <p className="text-zinc-400 text-sm mt-1">Envie avisos e eventos para todos os associados</p>

@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import TimerSystem from '@/components/TimerSystem'
-import DietPrescription from '@/components/DietPrescription'
 import TabAnamnese from '@/components/atleta/TabAnamnese'
 import TabCheckin from '@/components/atleta/TabCheckin'
 import TabRecordes from '@/components/atleta/TabRecordes'
@@ -12,12 +11,13 @@ import TabProntuario from '@/components/atleta/TabProntuario'
 import TabFotos from '@/components/atleta/TabFotos'
 import { useAuth } from '@/contexts/AuthContext'
 import { api } from '@/lib/api'
+import { toast } from 'sonner'
 import { QRCodeSVG } from 'qrcode.react'
 import {
   LayoutDashboard, User, CreditCard, Dumbbell, Clock, FileText,
   CheckCircle, Trophy, Camera, LogOut, ChevronRight,
   CalendarDays, ShieldCheck, Mail, Layers, Target, Calendar,
-  Upload, Activity
+  Upload, Activity, Zap, Bell
 } from 'lucide-react'
 
 interface Perfil {
@@ -26,6 +26,7 @@ interface Perfil {
   email: string
   role: string
   criadoEm: string
+  fotoPerfil?: string
   matriculas?: {
     id: number
     status: string
@@ -34,27 +35,70 @@ interface Perfil {
   }[]
 }
 
+interface TurmaResumida {
+  id: number; horario: string; modalidade: string; checkedIn: boolean
+}
+
+interface RecordeResumido {
+  id: number; exercicio: string; carga: string; data: string
+}
+
+interface TreinoPrescrito {
+  id: number; atletaNome: string; titulo: string; exercicios: string | null; criadoEm: string
+}
+
+interface WOD {
+  id: number; titulo: string; descricao?: string; exercicios?: string; data: string; autorNome?: string
+}
+
+interface Notificacao {
+  id: number; titulo: string; corpo: string; tipo: string; criadoEm: string
+}
+
 function iniciais(nome: string) {
   return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
 }
 
 const MENU = [
-  { id: 'dashboard',    label: 'Dashboard',         icon: LayoutDashboard },
-  { id: 'perfil',       label: 'Meu Perfil',         icon: User },
-  { id: 'matricula',    label: 'Cartão Associado',   icon: CreditCard },
-  { id: 'ficha',        label: 'Ficha de Treino',    icon: Dumbbell },
-  { id: 'anamnese',     label: 'Anamnese',           icon: FileText },
-  { id: 'checkin',      label: 'Check-in',           icon: CheckCircle },
-  { id: 'recordes',     label: 'Recordes Pessoais',  icon: Trophy },
-  { id: 'prontuario',   label: 'Prontuário',         icon: Activity },
-  { id: 'foto-inicial', label: 'Foto Inicial',       icon: Camera },
-  { id: 'foto-progresso', label: 'Foto 24 Semanas',  icon: Camera },
-  { id: 'cronometro',   label: 'Cronômetro',         icon: Clock },
-  { id: 'dieta',        label: 'Dieta',              icon: FileText },
+  { id: 'dashboard',      label: 'Dashboard',         short: 'Home',     icon: LayoutDashboard },
+  { id: 'perfil',         label: 'Meu Perfil',         short: 'Perfil',   icon: User },
+  { id: 'matricula',      label: 'Cartão Associado',   short: 'Cartão',   icon: CreditCard },
+  { id: 'ficha',          label: 'Ficha de Treino',    short: 'Ficha',    icon: Dumbbell },
+  { id: 'anamnese',       label: 'Anamnese',           short: 'Anamnese', icon: FileText },
+  { id: 'checkin',        label: 'Check-in',           short: 'Check-in', icon: CheckCircle },
+  { id: 'recordes',       label: 'Recordes Pessoais',  short: 'Records',  icon: Trophy },
+  { id: 'prontuario',     label: 'Prontuário',         short: 'Prontu.',  icon: Activity },
+  { id: 'foto-inicial',   label: 'Foto Inicial',       short: 'Foto Ini', icon: Camera },
+  { id: 'foto-progresso', label: 'Foto 24 Semanas',    short: 'Foto 24s', icon: Camera },
+  { id: 'notificacoes',   label: 'Notificações',       short: 'Avisos',   icon: Bell },
+  { id: 'cronometro',     label: 'Cronômetro',         short: 'Timer',    icon: Clock },
 ]
 
 function FichaTreinoTab() {
-  return (
+  const { user } = useAuth()
+  const { data: fichas = [], isLoading } = useQuery<TreinoPrescrito[]>({
+    queryKey: ['ficha-treino'],
+    queryFn: () => api.get('/ficha-treino'),
+    enabled: !!user,
+    retry: false,
+  })
+
+  type Exercicio = { nome: string; series?: number; repeticoes?: string; carga?: string }
+
+  function parseExercicios(raw: string | null): Exercicio[] {
+    if (!raw) return []
+    try { return JSON.parse(raw) } catch { return [] }
+  }
+
+  if (isLoading) return (
+    <Card>
+      <CardContent className="py-12">
+        <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-5 bg-gray-100 rounded animate-pulse" />)}</div>
+      </CardContent>
+    </Card>
+  )
+
+  if (fichas.length === 0) return (
     <Card>
       <CardHeader>
         <CardTitle className="text-gorila-primary flex items-center gap-2 text-base">
@@ -70,6 +114,42 @@ function FichaTreinoTab() {
       </CardContent>
     </Card>
   )
+
+  return (
+    <div className="space-y-4">
+      {fichas.map(ficha => {
+        const exercicios = parseExercicios(ficha.exercicios)
+        return (
+          <Card key={ficha.id}>
+            <CardHeader>
+              <CardTitle className="text-gorila-primary flex items-center gap-2 text-base">
+                <Dumbbell size={17} /> {ficha.titulo}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-gray-400 mb-4">Prescrito para: {ficha.atletaNome}</p>
+              {exercicios.length > 0 ? (
+                <div className="space-y-2">
+                  {exercicios.map((ex, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <p className="text-sm font-medium">{ex.nome}</p>
+                      <div className="flex gap-3 text-xs text-gray-500">
+                        {ex.series && <span>{ex.series} séries</span>}
+                        {ex.repeticoes && <span>× {ex.repeticoes}</span>}
+                        {ex.carga && <span className="bg-gorila-yellow/20 text-gorila-primary font-bold px-2 py-0.5 rounded-full">{ex.carga}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 whitespace-pre-line">{ficha.exercicios}</p>
+              )}
+            </CardContent>
+          </Card>
+        )
+      })}
+    </div>
+  )
 }
 
 export default function PainelAtleta() {
@@ -83,11 +163,67 @@ export default function PainelAtleta() {
     return () => clearInterval(t)
   }, [])
 
+  const queryClient = useQueryClient()
+  const fotoPerfilRef = useRef<HTMLInputElement>(null)
+
   const { data: perfil, isLoading } = useQuery<Perfil>({
     queryKey: ['perfil-me'],
     queryFn: () => api.get('/auth/me'),
     enabled: !!user,
   })
+
+  const { data: turmasData = [] } = useQuery<TurmaResumida[]>({
+    queryKey: ['turmas-dashboard'],
+    queryFn: () => api.get('/turmas'),
+    enabled: !!user,
+  })
+
+  const { data: recordesData = [] } = useQuery<RecordeResumido[]>({
+    queryKey: ['recordes-dashboard'],
+    queryFn: () => api.get('/recordes'),
+    enabled: !!user,
+  })
+
+  const { data: fichaData, isLoading: fichaLoading } = useQuery<TreinoPrescrito[]>({
+    queryKey: ['ficha-treino'],
+    queryFn: () => api.get('/ficha-treino'),
+    enabled: !!user,
+    retry: false,
+  })
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const { data: wods = [] } = useQuery<WOD[]>({
+    queryKey: ['wod-hoje'],
+    queryFn: () => api.get('/wod'),
+    enabled: !!user,
+    retry: false,
+  })
+
+  const { data: notificacoes = [] } = useQuery<Notificacao[]>({
+    queryKey: ['notificacoes-atleta'],
+    queryFn: () => api.get('/notificacoes'),
+    enabled: !!user,
+    refetchInterval: 120_000,
+    retry: false,
+  })
+
+  const checkinHoje = turmasData.filter(t => t.checkedIn)
+  const ultimoRecorde = recordesData[0] ?? null
+  const fichaAtual = fichaData?.[0] ?? null
+  const wodHoje = wods.find(w => w.data === todayStr) ?? wods[0] ?? null
+
+  async function handleFotoPerfilUpload(file: File) {
+    const fd = new FormData()
+    fd.append('file', file)
+    try {
+      const res = await api.upload<{ url: string }>('/upload', fd)
+      await api.patch('/auth/me', { fotoPerfil: res.url })
+      queryClient.invalidateQueries({ queryKey: ['perfil-me'] })
+      toast.success('Foto atualizada!')
+    } catch {
+      toast.error('Erro ao enviar foto.')
+    }
+  }
 
   const handleLogout = () => { logout(); navigate('/') }
 
@@ -96,72 +232,100 @@ export default function PainelAtleta() {
   const matriculaAtiva = perfil?.matriculas?.find(m => m.status === 'ATIVA')
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#f4f4f4]">
       {/* Header */}
-      <header className="bg-gorila-primary text-white shadow-lg">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="shrink-0">
-              <div className="w-9 h-9 rounded-md overflow-hidden" style={{ backgroundColor: '#1a1718' }}>
-                <img src="/lovable-uploads/b1d0c406-fb12-494e-ad8c-a0ad4760dda0.png" alt="Gorila Rise" className="w-full h-full object-contain" />
-              </div>
-            </Link>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gorila-yellow flex items-center justify-center font-bold text-gorila-primary text-sm shrink-0">
-                {iniciais(user.nome)}
-              </div>
-              <div>
-                <p className="font-bold leading-tight">{user.nome}</p>
-                <p className="text-gorila-yellow text-xs font-medium">
-                  {user.role === 'ADMIN' ? 'Administrador' : user.role === 'PROFESSOR' ? 'Professor' : user.role === 'TREINADOR' ? 'Treinador' : 'Atleta Gorila Rise'}
-                </p>
+      <header className="bg-gorila-primary text-white shadow-xl border-b border-white/5">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-4">
+              <Link to="/" className="shrink-0">
+                <div className="w-8 h-8 rounded-md overflow-hidden opacity-90 hover:opacity-100 transition-opacity" style={{ backgroundColor: '#1a1718' }}>
+                  <img src="/lovable-uploads/b1d0c406-fb12-494e-ad8c-a0ad4760dda0.png" alt="Gorila Rise" className="w-full h-full object-contain" />
+                </div>
+              </Link>
+              <div className="w-px h-6 bg-white/15" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gorila-yellow flex items-center justify-center font-black text-gorila-primary text-xs shrink-0 shadow-sm">
+                  {iniciais(user.nome)}
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-[13px] font-bold leading-tight">{user.nome}</p>
+                  <p className="text-gorila-yellow text-[10px] font-semibold tracking-wide">
+                    {user.role === 'ADMIN' ? 'Administrador'
+                      : user.role === 'TREINADOR' ? (
+                          user.funcao === 'NUTRICIONISTA' ? 'Nutricionista'
+                          : user.funcao === 'FISIOTERAPEUTA' ? 'Fisioterapeuta'
+                          : 'Professor / Treinador'
+                        )
+                      : 'Atleta Gorila Rise'}
+                  </p>
+                </div>
               </div>
             </div>
+            <Button onClick={handleLogout} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 gap-1.5 text-[12px] transition-all">
+              <LogOut size={14} />
+              <span className="hidden sm:inline">Sair</span>
+            </Button>
           </div>
-          <Button onClick={handleLogout} variant="ghost" size="sm" className="text-white hover:text-gorila-yellow hover:bg-transparent gap-1.5">
-            <LogOut size={16} />
-            <span className="hidden sm:inline">Sair</span>
-          </Button>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
+      {/* ── Mobile tab bar ─────────────────────────────────────────────── */}
+      <div className="lg:hidden sticky top-0 z-20 bg-gorila-primary border-b border-white/10 shadow-md">
+        <div className="overflow-x-auto scrollbar-none">
+          <div className="flex min-w-max px-2 py-1.5 gap-0.5">
+            {MENU.map(item => (
+              <button
+                key={item.id}
+                onClick={() => setTab(item.id)}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-all duration-150 min-w-[56px] ${
+                  tab === item.id
+                    ? 'bg-gorila-yellow text-gorila-primary'
+                    : 'text-white/50 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <item.icon size={15} className="shrink-0" />
+                <span className="text-[9px] font-bold whitespace-nowrap leading-tight">{item.short}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-4 md:py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-4">
-            <Card>
-              <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-gorila-primary text-base">Menu do Atleta</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 pb-2">
-                <nav className="flex flex-col">
-                  {MENU.map(item => (
-                    <button
-                      key={item.id}
-                      onClick={() => setTab(item.id)}
-                      className={`flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
-                        tab === item.id
-                          ? 'bg-gorila-primary text-white font-medium'
-                          : 'hover:bg-gray-50 text-gray-700'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <item.icon size={15} />
-                        {item.label}
-                      </span>
-                      <ChevronRight size={13} className="opacity-40" />
-                    </button>
-                  ))}
-                </nav>
-              </CardContent>
-            </Card>
+          {/* Sidebar — desktop only */}
+          <div className="hidden lg:block lg:col-span-1 space-y-4">
+            <div className="bg-gorila-primary rounded-xl overflow-hidden shadow-lg">
+              <div className="px-4 py-3 border-b border-white/8">
+                <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-gorila-yellow/70">Menu do Atleta</p>
+              </div>
+              <nav className="flex flex-col py-1">
+                {MENU.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => setTab(item.id)}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-[13px] transition-all duration-150 ${
+                      tab === item.id
+                        ? 'bg-gorila-yellow text-gorila-primary font-bold'
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <item.icon size={14} className="shrink-0" />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {tab === item.id && <ChevronRight size={12} className="opacity-60 shrink-0" />}
+                  </button>
+                ))}
+              </nav>
+            </div>
 
-            {(user.role === 'ADMIN' || user.role === 'TREINADOR' || user.role === 'PROFESSOR') && (
+            {(user.role === 'ADMIN' || user.role === 'TREINADOR') && (
               <Link to="/admin">
-                <Button className="w-full bg-gorila-yellow text-gorila-primary hover:bg-yellow-400 font-bold text-sm">
+                <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gorila-yellow/40 text-gorila-primary bg-gorila-yellow/90 hover:bg-gorila-yellow font-bold text-[12px] tracking-wide transition-colors duration-150">
+                  <LayoutDashboard size={13} />
                   Ir para o Admin
-                </Button>
+                </button>
               </Link>
             )}
           </div>
@@ -171,64 +335,125 @@ export default function PainelAtleta() {
 
             {/* Dashboard */}
             {tab === 'dashboard' && (
-              <div className="space-y-6">
+              <div className="space-y-4 animate-fade-in">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                        <Calendar size={16} className="text-gorila-yellow" /> Check-in Hoje
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-xl font-bold text-green-600">✓ Confirmado</p>
-                      <p className="text-xs text-gray-500 mt-1">Horário: 08:00 – 10:00</p>
-                      <Button size="sm" onClick={() => setTab('checkin')} className="w-full mt-3 bg-gorila-primary hover:bg-gorila-dark text-xs">Alterar Horário</Button>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                        <Target size={16} className="text-gorila-yellow" /> Próximo Treino
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="font-semibold">Treino de Peito</p>
-                      <p className="text-xs text-gray-500 mt-1">4 exercícios • 45 min</p>
-                      <span className="inline-block mt-3 bg-gorila-yellow text-gorila-primary text-xs font-bold px-2.5 py-0.5 rounded-full">Em andamento</span>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                        <Trophy size={16} className="text-gorila-yellow" /> Último Recorde
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="font-semibold">Supino: 80kg</p>
-                      <p className="text-xs text-gray-500 mt-1">Batido há 3 dias</p>
-                      <p className="text-xs text-green-600 mt-1 font-medium">+5kg do recorde anterior</p>
-                    </CardContent>
-                  </Card>
+                  {/* Check-in — card destaque */}
+                  <div className="bg-gorila-primary rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-white/8 flex items-center justify-center">
+                        <Calendar size={14} className="text-gorila-yellow" />
+                      </div>
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-white/50">Check-in Hoje</p>
+                    </div>
+                    {checkinHoje.length > 0 ? (
+                      <>
+                        <p className="text-lg font-black text-gorila-yellow leading-tight">✓ Confirmado</p>
+                        <p className="text-[11px] text-white/40 mt-1">{checkinHoje[0].modalidade} · {checkinHoje[0].horario}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-base font-black text-white/60 leading-tight">Sem check-in</p>
+                        <p className="text-[11px] text-white/40 mt-1">Nenhuma turma confirmada hoje</p>
+                      </>
+                    )}
+                    <button
+                      onClick={() => setTab('checkin')}
+                      className="mt-3 w-full text-[11px] font-bold py-1.5 rounded-lg border border-white/10 text-white/70 hover:text-white hover:border-white/20 transition-colors duration-150"
+                    >
+                      {checkinHoje.length > 0 ? 'Alterar Horário' : 'Fazer Check-in'}
+                    </button>
+                  </div>
+
+                  {/* Ficha de Treino */}
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-gorila-yellow/15 flex items-center justify-center">
+                        <Target size={14} className="text-gorila-primary" />
+                      </div>
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Ficha de Treino</p>
+                    </div>
+                    {fichaLoading ? (
+                      <div className="h-8 bg-gray-100 rounded animate-pulse" />
+                    ) : fichaAtual ? (
+                      <>
+                        <p className="text-base font-black text-gorila-primary leading-tight">{fichaAtual.titulo}</p>
+                        <p className="text-[11px] text-gray-400 mt-1">Prescrito por seu treinador</p>
+                        <button
+                          onClick={() => setTab('ficha')}
+                          className="inline-block mt-3 bg-gorila-yellow text-gorila-primary text-[10px] font-black px-2.5 py-1 rounded-full tracking-wide"
+                        >
+                          VER FICHA
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-base font-medium text-gray-400 leading-tight">Sem ficha prescrita</p>
+                        <p className="text-[11px] text-gray-300 mt-1">Aguardando seu treinador</p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Último Recorde */}
+                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-7 h-7 rounded-lg bg-gorila-yellow/15 flex items-center justify-center">
+                        <Trophy size={14} className="text-gorila-primary" />
+                      </div>
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Último Recorde</p>
+                    </div>
+                    {ultimoRecorde ? (
+                      <>
+                        <p className="text-base font-black text-gorila-primary leading-tight">{ultimoRecorde.exercicio}: {ultimoRecorde.carga}</p>
+                        <p className="text-[11px] text-gray-400 mt-1">{new Date(ultimoRecorde.data).toLocaleDateString('pt-BR')}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-base font-medium text-gray-400 leading-tight">Nenhum recorde</p>
+                        <button onClick={() => setTab('recordes')} className="mt-2 text-gorila-primary text-xs font-semibold hover:underline">
+                          Registrar PR →
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-gorila-primary text-base">Relógio</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center py-6">
-                    <div className="text-5xl font-mono font-bold text-gorila-primary mb-2">
+
+                {/* WOD do Dia */}
+                {wodHoje && (
+                  <div className="bg-gorila-yellow/10 border border-gorila-yellow/30 rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap size={16} className="text-gorila-primary" />
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-gorila-primary/70">WOD do Dia — {new Date(wodHoje.data + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
+                    </div>
+                    <p className="text-base font-black text-gorila-primary mb-1">{wodHoje.titulo}</p>
+                    {wodHoje.descricao && <p className="text-sm text-gray-600 mb-2">{wodHoje.descricao}</p>}
+                    {wodHoje.exercicios && (
+                      <pre className="text-xs text-gray-600 bg-white/60 rounded-lg p-3 whitespace-pre-wrap font-mono">{wodHoje.exercicios}</pre>
+                    )}
+                    {wodHoje.autorNome && <p className="text-[11px] text-gray-400 mt-2">Publicado por {wodHoje.autorNome}</p>}
+                  </div>
+                )}
+
+                {/* Relógio — widget de marca */}
+                <div className="bg-gorila-primary rounded-xl px-4 sm:px-6 py-5 flex items-center justify-between shadow-sm">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-1">Agora</p>
+                    <div className="text-3xl sm:text-4xl font-black font-mono text-white leading-none tracking-tight">
                       {clock.toLocaleTimeString('pt-BR')}
                     </div>
-                    <p className="text-gray-500 capitalize">
-                      {clock.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    <p className="text-gorila-yellow text-[11px] mt-1.5 capitalize font-medium truncate">
+                      {clock.toLocaleDateString('pt-BR', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-gorila-yellow/30 flex items-center justify-center shrink-0 ml-3">
+                    <Clock size={18} className="text-gorila-yellow/70" />
+                  </div>
+                </div>
               </div>
             )}
 
             {/* Meu Perfil */}
             {tab === 'perfil' && (
-              <div className="space-y-4">
+              <div className="space-y-4 animate-fade-in">
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-gorila-primary flex items-center gap-2 text-base">
@@ -241,13 +466,32 @@ export default function PainelAtleta() {
                     ) : (
                       <div className="flex flex-col sm:flex-row gap-6">
                         <div className="flex flex-col items-center gap-2 shrink-0">
-                          <div className="w-24 h-32 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-1 overflow-hidden">
-                            <Camera size={24} className="text-gray-300" />
-                            <span className="text-[10px] text-gray-400 font-medium">3×4</span>
+                          <div
+                            onClick={() => fotoPerfilRef.current?.click()}
+                            className="w-24 h-32 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-1 overflow-hidden cursor-pointer hover:border-gorila-primary/40 transition-colors"
+                          >
+                            {perfil?.fotoPerfil ? (
+                              <img src={perfil.fotoPerfil} alt="Foto perfil" className="w-full h-full object-cover" />
+                            ) : (
+                              <>
+                                <Camera size={24} className="text-gray-300" />
+                                <span className="text-[10px] text-gray-400 font-medium">3×4</span>
+                              </>
+                            )}
                           </div>
-                          <button className="flex items-center gap-1 text-xs text-gorila-primary hover:underline">
+                          <button
+                            onClick={() => fotoPerfilRef.current?.click()}
+                            className="flex items-center gap-1 text-xs text-gorila-primary hover:underline"
+                          >
                             <Upload size={11} /> Enviar foto
                           </button>
+                          <input
+                            ref={fotoPerfilRef}
+                            type="file"
+                            className="hidden"
+                            accept=".jpg,.jpeg,.png"
+                            onChange={e => { const f = e.target.files?.[0]; if (f) handleFotoPerfilUpload(f) }}
+                          />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm flex-1">
                           <div className="flex items-start gap-2">
@@ -290,7 +534,7 @@ export default function PainelAtleta() {
 
             {/* Cartão Associado */}
             {tab === 'matricula' && (
-              <div className="space-y-4">
+              <div className="space-y-4 animate-fade-in">
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-gorila-primary flex items-center gap-2 text-base">
@@ -391,7 +635,45 @@ export default function PainelAtleta() {
             {tab === 'foto-inicial'   && <TabFotos tipo="INICIAL" />}
             {tab === 'foto-progresso' && <TabFotos tipo="PROGRESSO" />}
             {tab === 'cronometro'     && <TimerSystem />}
-            {tab === 'dieta'          && <DietPrescription userName={user.nome} />}
+
+            {tab === 'notificacoes' && (
+              <div className="space-y-3 animate-fade-in">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-gorila-primary flex items-center gap-2 text-base">
+                      <Bell size={17} /> Notificações do Clube
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {notificacoes.length === 0 ? (
+                      <div className="text-center py-10 text-gray-400">
+                        <Bell size={36} className="mx-auto mb-3 opacity-30" />
+                        <p className="text-sm font-medium">Nenhuma notificação ainda.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {notificacoes.map(n => (
+                          <div key={n.id} className="p-4 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100/70 transition-colors">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <p className="font-bold text-sm text-gorila-primary">{n.titulo}</p>
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                n.tipo === 'EVENTO' ? 'bg-blue-100 text-blue-700'
+                                : n.tipo === 'COMUNICADO' ? 'bg-purple-100 text-purple-700'
+                                : 'bg-gorila-yellow/20 text-gorila-primary'
+                              }`}>{n.tipo}</span>
+                            </div>
+                            <p className="text-sm text-gray-600">{n.corpo}</p>
+                            <p className="text-[11px] text-gray-400 mt-2">
+                              {new Date(n.criadoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
           </div>
         </div>

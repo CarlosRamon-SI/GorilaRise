@@ -34,52 +34,54 @@ export default function PainelSocio() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-gorila-primary text-white shadow-lg">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="shrink-0">
-              <div className="w-9 h-9 rounded-md overflow-hidden" style={{ backgroundColor: '#1a1718' }}>
-                <img src="/lovable-uploads/b1d0c406-fb12-494e-ad8c-a0ad4760dda0.png" alt="Gorila Rise" className="w-full h-full object-contain" />
-              </div>
-            </Link>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gorila-yellow flex items-center justify-center font-bold text-gorila-primary text-sm shrink-0">
-                {iniciais(user.nome)}
-              </div>
-              <div>
-                <p className="font-bold leading-tight">{user.nome}</p>
-                <p className="text-gorila-yellow text-xs font-medium">Sócio Torcedor</p>
+    <div className="min-h-screen bg-[#f4f4f4]">
+      <header className="bg-gorila-primary text-white shadow-xl border-b border-white/5">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-4">
+              <Link to="/" className="shrink-0">
+                <div className="w-8 h-8 rounded-md overflow-hidden opacity-90 hover:opacity-100 transition-opacity" style={{ backgroundColor: '#1a1718' }}>
+                  <img src="/lovable-uploads/b1d0c406-fb12-494e-ad8c-a0ad4760dda0.png" alt="Gorila Rise" className="w-full h-full object-contain" />
+                </div>
+              </Link>
+              <div className="w-px h-6 bg-white/15" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gorila-yellow flex items-center justify-center font-black text-gorila-primary text-xs shrink-0 shadow-sm">
+                  {iniciais(user.nome)}
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-[13px] font-bold leading-tight">{user.nome}</p>
+                  <p className="text-gorila-yellow text-[10px] font-semibold tracking-wide">Sócio Torcedor</p>
+                </div>
               </div>
             </div>
+            <Button onClick={() => { logout(); navigate('/') }} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 gap-1.5 text-[12px] transition-all">
+              <LogOut size={14} /><span className="hidden sm:inline">Sair</span>
+            </Button>
           </div>
-          <Button onClick={() => { logout(); navigate('/') }} variant="ghost" size="sm" className="text-white hover:text-gorila-yellow hover:bg-transparent gap-1.5">
-            <LogOut size={16} /><span className="hidden sm:inline">Sair</span>
-          </Button>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1">
-            <Card>
-              <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-gorila-primary text-base">Área do Sócio</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 pb-2">
-                <nav className="flex flex-col">
-                  {MENU.map(item => (
-                    <button key={item.id} onClick={() => setTab(item.id)}
-                      className={`flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
-                        tab === item.id ? 'bg-gorila-primary text-white font-medium' : 'hover:bg-gray-50 text-gray-700'
-                      }`}>
-                      <span className="flex items-center gap-2.5"><item.icon size={15} />{item.label}</span>
-                      <ChevronRight size={13} className="opacity-40" />
-                    </button>
-                  ))}
-                </nav>
-              </CardContent>
-            </Card>
+            <div className="bg-gorila-primary rounded-xl overflow-hidden shadow-lg">
+              <div className="px-4 py-3 border-b border-white/8">
+                <p className="text-[10px] font-bold tracking-[0.18em] uppercase text-gorila-yellow/70">Área do Sócio</p>
+              </div>
+              <nav className="flex flex-col py-1">
+                {MENU.map(item => (
+                  <button key={item.id} onClick={() => setTab(item.id)}
+                    className={`flex items-center gap-3 px-4 py-2.5 text-[13px] transition-all duration-150 ${
+                      tab === item.id ? 'bg-gorila-yellow text-gorila-primary font-bold' : 'text-white/60 hover:text-white hover:bg-white/5'
+                    }`}>
+                    <item.icon size={14} className="shrink-0" />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {tab === item.id && <ChevronRight size={12} className="opacity-60 shrink-0" />}
+                  </button>
+                ))}
+              </nav>
+            </div>
           </div>
 
           <div className="lg:col-span-3">

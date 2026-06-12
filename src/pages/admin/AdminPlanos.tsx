@@ -82,7 +82,7 @@ export default function AdminPlanos() {
   ]
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-5 md:p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold mb-1">Planos</h1>

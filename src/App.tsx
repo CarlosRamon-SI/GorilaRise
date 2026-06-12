@@ -43,7 +43,12 @@ import Financeiro from "./pages/admin/Financeiro"
 import Premiacoes from "./pages/admin/Premiacoes"
 import Patrocinadores from "./pages/admin/Patrocinadores"
 import CheckinAdmin from "./pages/admin/CheckinAdmin"
+import Turmas from "./pages/admin/Turmas"
+import AdminAnamneses from "./pages/admin/AdminAnamneses"
+import AdminDesempenho from "./pages/admin/AdminDesempenho"
 import ProjetoPage from "./pages/projetos/ProjetoPage";
+import Termos from "./pages/Termos";
+import Privacidade from "./pages/Privacidade";
 
 const queryClient = new QueryClient();
 
@@ -86,6 +91,9 @@ const App = () => (
             <Route path="matriculas" element={<Matriculas />} />
             <Route path="treinos" element={<Treinos />} />
             <Route path="checkin" element={<CheckinAdmin />} />
+            <Route path="turmas" element={<Turmas />} />
+            <Route path="anamneses" element={<AdminAnamneses />} />
+            <Route path="desempenho" element={<AdminDesempenho />} />
             <Route path="financeiro" element={<Financeiro />} />
             <Route path="notificacoes" element={<Notificacoes />} />
             <Route path="premiacoes" element={<Premiacoes />} />
@@ -95,6 +103,8 @@ const App = () => (
             <Route path="documentos" element={<AdminDocumentos />} />
             <Route path="configuracoes" element={<Configuracoes />} />
           </Route>
+          <Route path="/termos" element={<Termos />} />
+          <Route path="/privacidade" element={<Privacidade />} />
           <Route path="/projetos/:slug" element={<ProjetoPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

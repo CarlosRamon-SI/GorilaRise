@@ -3,7 +3,7 @@ import { api } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { calcForca, validarCPF } from '@/lib/validators'
 import { fmt } from '@/lib/masks'
-import { KeyRound, Loader2, UserPlus } from 'lucide-react'
+import { KeyRound, Loader2, UserPlus, Pencil, X } from 'lucide-react'
 
 interface Usuario {
   id: number
@@ -12,7 +12,8 @@ interface Usuario {
   cpf: string
   telefone: string
   cidade: string
-  role: 'USUARIO' | 'TREINADOR' | 'ADMIN'
+  role: 'ATLETA' | 'TREINADOR' | 'ADMIN'
+  funcao?: 'PROFESSOR' | 'NUTRICIONISTA' | 'FISIOTERAPEUTA' | null
   ativo: boolean
   criadoEm: string
 }
@@ -118,9 +119,106 @@ function ModalSenha({ usuario, onClose }: { usuario: Pick<Usuario, 'id' | 'nome'
   )
 }
 
+// ── Modal: Editar Perfil ──────────────────────────────────────────────────────
+
+function ModalEditarUsuario({ usuario, onClose, onSalvo }: { usuario: Usuario; onClose: () => void; onSalvo: (u: Usuario) => void }) {
+  const [form, setForm] = useState({
+    nome: usuario.nome, email: usuario.email, cpf: usuario.cpf,
+    telefone: usuario.telefone, cidade: usuario.cidade,
+  })
+  const [saving, setSaving] = useState(false)
+  const [erro, setErro] = useState('')
+
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', esc)
+    return () => document.removeEventListener('keydown', esc)
+  }, [onClose])
+
+  const setField = (field: keyof typeof form, value: string) => {
+    const formatted = field === 'cpf' ? fmt.cpf(value)
+      : field === 'telefone' ? fmt.telefone(value)
+      : value
+    setForm(prev => ({ ...prev, [field]: formatted }))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setErro('')
+    setSaving(true)
+    try {
+      const updated = await api.patch<Usuario>(`/admin/usuarios/${usuario.id}`, {
+        nome: form.nome, email: form.email, cpf: form.cpf,
+        telefone: form.telefone, cidade: form.cidade,
+      })
+      onSalvo(updated)
+      onClose()
+    } catch (e: any) {
+      setErro(e.message ?? 'Erro ao salvar.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inp = 'w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gorila-yellow'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true"
+        className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md shadow-2xl"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Pencil size={18} className="text-gorila-yellow" /> Editar Perfil
+          </h2>
+          <button onClick={onClose} className="text-zinc-500 hover:text-white"><X size={18} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Nome</label>
+              <input type="text" value={form.nome} onChange={e => setField('nome', e.target.value)} className={inp} required autoFocus />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">E-mail</label>
+              <input type="email" value={form.email} onChange={e => setField('email', e.target.value)} className={inp} required />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">CPF</label>
+              <input type="text" value={form.cpf} onChange={e => setField('cpf', e.target.value)} className={inp} maxLength={14} />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Telefone</label>
+              <input type="text" value={form.telefone} onChange={e => setField('telefone', e.target.value)} className={inp} maxLength={15} />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-zinc-400 mb-1 block">Cidade</label>
+            <input type="text" value={form.cidade} onChange={e => setField('cidade', e.target.value)} className={inp} />
+          </div>
+          {erro && <p className="text-red-400 text-xs">{erro}</p>}
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-2 rounded-lg border border-zinc-700 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors">
+              Cancelar
+            </button>
+            <button type="submit" disabled={saving}
+              className="flex-1 py-2 rounded-lg bg-gorila-yellow text-gorila-primary font-bold text-sm hover:bg-yellow-300 transition-colors flex items-center justify-center gap-1 disabled:opacity-60">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={14} />}
+              Salvar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ── Modal: Novo Usuário ────────────────────────────────────────────────────────
 
-const BLANK_FORM = { nome: '', email: '', cpf: '', telefone: '', cidade: '', role: 'USUARIO' as Usuario['role'], senha: '', confirmarSenha: '' }
+const BLANK_FORM = { nome: '', email: '', cpf: '', telefone: '', cidade: '', role: 'ATLETA' as Usuario['role'], funcao: '' as string, senha: '', confirmarSenha: '' }
 
 function ModalNovoUsuario({ onClose, onCriado }: { onClose: () => void; onCriado: (u: Usuario) => void }) {
   const [form, setForm] = useState(BLANK_FORM)
@@ -160,6 +258,7 @@ function ModalNovoUsuario({ onClose, onCriado }: { onClose: () => void; onCriado
         nome: form.nome, email: form.email, cpf: form.cpf,
         telefone: form.telefone, cidade: form.cidade,
         role: form.role, senha: form.senha,
+        ...(form.role === 'TREINADOR' && form.funcao ? { funcao: form.funcao } : {}),
       })
       onCriado(novo)
       setOk(true)
@@ -235,12 +334,26 @@ function ModalNovoUsuario({ onClose, onCriado }: { onClose: () => void; onCriado
                 <select id="novo-role" value={form.role}
                   onChange={e => setField('role', e.target.value)}
                   className={inputCls}>
-                  <option value="USUARIO">USUARIO</option>
-                  <option value="TREINADOR">TREINADOR</option>
-                  <option value="ADMIN">ADMIN</option>
+                  <option value="ATLETA">Atleta</option>
+                  <option value="TREINADOR">Treinador / Staff</option>
+                  <option value="ADMIN">Admin</option>
                 </select>
               </div>
             </div>
+
+            {form.role === 'TREINADOR' && (
+              <div>
+                <label className="text-xs text-zinc-400 mb-1 block" htmlFor="novo-funcao">Especialidade</label>
+                <select id="novo-funcao" value={form.funcao}
+                  onChange={e => setForm(prev => ({ ...prev, funcao: e.target.value }))}
+                  className={inputCls}>
+                  <option value="">— sem especialidade —</option>
+                  <option value="PROFESSOR">Professor / Treinador</option>
+                  <option value="NUTRICIONISTA">Nutricionista</option>
+                  <option value="FISIOTERAPEUTA">Fisioterapeuta</option>
+                </select>
+              </div>
+            )}
 
             {/* Senha */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -304,6 +417,7 @@ export default function Usuarios() {
   const [saving, setSaving] = useState<number | null>(null)
   const [senhaModal, setSenhaModal] = useState<Pick<Usuario, 'id' | 'nome'> | null>(null)
   const [novoModal, setNovoModal] = useState(false)
+  const [editarModal, setEditarModal] = useState<Usuario | null>(null)
 
   useEffect(() => {
     api.get<Usuario[]>('/admin/usuarios')
@@ -329,18 +443,33 @@ export default function Usuarios() {
     const map: Record<string, string> = {
       ADMIN:     'bg-red-500/20 text-red-400 border-red-500/30',
       TREINADOR: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      USUARIO:   'bg-zinc-700 text-zinc-300 border-zinc-600',
+      ATLETA:    'bg-zinc-700 text-zinc-300 border-zinc-600',
     }
-    return map[role] ?? map.USUARIO
+    return map[role] ?? map.ATLETA
+  }
+
+  const roleLabel = (u: Usuario) => {
+    if (u.role === 'TREINADOR' && u.funcao) {
+      const labels: Record<string, string> = { PROFESSOR: 'Professor', NUTRICIONISTA: 'Nutricionista', FISIOTERAPEUTA: 'Fisioterapeuta' }
+      return `Treinador · ${labels[u.funcao] ?? u.funcao}`
+    }
+    return u.role === 'ATLETA' ? 'Atleta' : u.role === 'ADMIN' ? 'Admin' : 'Treinador'
   }
 
   return (
-    <div className="p-8">
+    <div className="px-4 py-5 md:p-8">
       {senhaModal && <ModalSenha usuario={senhaModal} onClose={() => setSenhaModal(null)} />}
       {novoModal && (
         <ModalNovoUsuario
           onClose={() => setNovoModal(false)}
           onCriado={(u) => setUsuarios(prev => [u, ...prev])}
+        />
+      )}
+      {editarModal && (
+        <ModalEditarUsuario
+          usuario={editarModal}
+          onClose={() => setEditarModal(null)}
+          onSalvo={(u) => setUsuarios(prev => prev.map(x => x.id === u.id ? { ...x, ...u } : x))}
         />
       )}
 
@@ -367,8 +496,8 @@ export default function Usuarios() {
           ))}
         </div>
       ) : (
-        <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="border-b border-zinc-800 text-zinc-400 text-left">
                 <th className="px-4 py-3 font-medium">Nome</th>
@@ -393,13 +522,13 @@ export default function Usuarios() {
                         onChange={(e) => toggle(u, 'role', e.target.value)}
                         className="bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white"
                       >
-                        <option value="USUARIO">USUARIO</option>
-                        <option value="TREINADOR">TREINADOR</option>
-                        <option value="ADMIN">ADMIN</option>
+                        <option value="ATLETA">Atleta</option>
+                        <option value="TREINADOR">Treinador / Staff</option>
+                        <option value="ADMIN">Admin</option>
                       </select>
                     ) : (
                       <span className={`text-xs border px-2 py-0.5 rounded-full ${roleBadge(u.role)}`}>
-                        {u.role}
+                        {roleLabel(u)}
                       </span>
                     )}
                   </td>
@@ -427,15 +556,22 @@ export default function Usuarios() {
                   </td>
                   {isAdmin && (
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => setSenhaModal(u)}
-                        aria-label={`Alterar senha de ${u.nome}`}
-                        title="Alterar senha"
-                        className="flex items-center gap-1 text-xs text-zinc-400 hover:text-gorila-yellow transition-colors px-2 py-1 rounded hover:bg-zinc-800"
-                      >
-                        <KeyRound size={13} />
-                        Senha
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditarModal(u)}
+                          title="Editar perfil"
+                          className="flex items-center gap-1 text-xs text-zinc-400 hover:text-gorila-yellow transition-colors px-2 py-1 rounded hover:bg-zinc-800">
+                          <Pencil size={13} />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => setSenhaModal(u)}
+                          title="Alterar senha"
+                          className="flex items-center gap-1 text-xs text-zinc-400 hover:text-gorila-yellow transition-colors px-2 py-1 rounded hover:bg-zinc-800">
+                          <KeyRound size={13} />
+                          Senha
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>

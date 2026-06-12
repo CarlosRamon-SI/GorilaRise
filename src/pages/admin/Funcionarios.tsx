@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { Plus, Pencil, Trash2, X, Check } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Check, Link, Unlink } from 'lucide-react'
+
+interface UsuarioVinculo {
+  id: number
+  nome: string
+  email: string
+  role: string
+}
 
 interface Funcionario {
   id: number
@@ -9,12 +16,17 @@ interface Funcionario {
   cref: string
   funcao: 'PROFESSOR' | 'NUTRICIONISTA' | 'FISIOTERAPEUTA'
   ativo: boolean
+  usuarioId: number | null
+  usuario: UsuarioVinculo | null
 }
 
-const blank = () => ({ nome: '', email: '', cref: '', funcao: 'PROFESSOR' as const })
+const blank = () => ({
+  nome: '', email: '', cref: '', funcao: 'PROFESSOR' as const, usuarioId: '' as string | '',
+})
 
 export default function Funcionarios() {
   const [items, setItems] = useState<Funcionario[]>([])
+  const [treinadores, setTreinadores] = useState<UsuarioVinculo[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(blank())
@@ -27,11 +39,14 @@ export default function Funcionarios() {
       .then(setItems)
       .catch(() => {})
       .finally(() => setLoading(false))
+    api.get<UsuarioVinculo[]>('/admin/usuarios?role=TREINADOR')
+      .then(setTreinadores)
+      .catch(() => {})
   }, [])
 
   function startEdit(f: Funcionario) {
     setEditId(f.id)
-    setForm({ nome: f.nome, email: f.email, cref: f.cref, funcao: f.funcao })
+    setForm({ nome: f.nome, email: f.email, cref: f.cref, funcao: f.funcao, usuarioId: f.usuarioId ? String(f.usuarioId) : '' })
     setShowForm(true)
     setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -44,12 +59,19 @@ export default function Funcionarios() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true); setError('')
+    const payload = {
+      nome: form.nome,
+      email: form.email,
+      cref: form.cref,
+      funcao: form.funcao,
+      usuarioId: form.usuarioId ? Number(form.usuarioId) : null,
+    }
     try {
       if (editId) {
-        const updated = await api.patch<Funcionario>(`/funcionarios/${editId}`, form)
+        const updated = await api.patch<Funcionario>(`/funcionarios/${editId}`, payload)
         setItems(prev => prev.map(f => f.id === editId ? updated : f))
       } else {
-        const novo = await api.post<Funcionario>('/funcionarios', form)
+        const novo = await api.post<Funcionario>('/funcionarios', payload)
         setItems(prev => [novo, ...prev])
       }
       cancelForm()
@@ -77,8 +99,11 @@ export default function Funcionarios() {
 
   const FUNCOES = { PROFESSOR: 'Professor', NUTRICIONISTA: 'Nutricionista', FISIOTERAPEUTA: 'Fisioterapeuta' }
 
+  // IDs já vinculados (excluir do select ao criar/editar outro funcionário)
+  const vinculados = new Set(items.filter(f => f.usuarioId && f.id !== editId).map(f => f.usuarioId))
+
   return (
-    <div className="p-8">
+    <div className="px-4 py-5 md:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Funcionários</h1>
@@ -118,6 +143,25 @@ export default function Funcionarios() {
               </select>
             </div>
           </div>
+
+          {/* Vínculo com login do sistema */}
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1 flex items-center gap-1">
+              <Link size={11} /> Usuário do sistema (opcional)
+            </label>
+            <select value={form.usuarioId}
+              onChange={e => setForm(p => ({ ...p, usuarioId: e.target.value }))}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+              <option value="">— sem vínculo —</option>
+              {treinadores
+                .filter(u => !vinculados.has(u.id))
+                .map(u => (
+                  <option key={u.id} value={u.id}>{u.nome} ({u.email})</option>
+                ))}
+            </select>
+            <p className="text-xs text-zinc-600 mt-1">Vincula este registro HR ao login de um treinador no sistema.</p>
+          </div>
+
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={saving}
               className="flex items-center gap-2 bg-yellow-400 text-zinc-900 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-300 disabled:opacity-50">
@@ -142,7 +186,7 @@ export default function Funcionarios() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-800">
-                {['Nome', 'E-mail', 'CREF/CRN', 'Função', 'Status', ''].map(h => (
+                {['Nome', 'E-mail', 'CREF/CRN', 'Função', 'Login', 'Status', ''].map(h => (
                   <th key={h} className="text-left py-3 px-4 text-xs text-zinc-500 font-medium">{h}</th>
                 ))}
               </tr>
@@ -152,9 +196,20 @@ export default function Funcionarios() {
                 <tr key={f.id} className="border-b border-zinc-800/50 hover:bg-zinc-900/50 transition-colors">
                   <td className="py-3 px-4 font-medium">{f.nome}</td>
                   <td className="py-3 px-4 text-zinc-400 text-sm">{f.email}</td>
-                  <td className="py-3 px-4 text-sm font-mono text-zinc-300">{f.cref}</td>
+                  <td className="py-3 px-4 text-sm font-mono text-zinc-300">{f.cref || '—'}</td>
                   <td className="py-3 px-4">
                     <span className="text-xs bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-full">{FUNCOES[f.funcao]}</span>
+                  </td>
+                  <td className="py-3 px-4">
+                    {f.usuario ? (
+                      <span className="flex items-center gap-1 text-xs text-green-400">
+                        <Link size={11} /> {f.usuario.nome}
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-zinc-600">
+                        <Unlink size={11} /> sem vínculo
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <button onClick={() => toggleAtivo(f)}

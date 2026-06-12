@@ -36,7 +36,9 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     }
 
     if (!res.ok) {
-      throw new Error(data?.error ?? `Erro ${res.status}`)
+      const err = new Error(data?.error ?? `Erro ${res.status}`)
+      ;(err as any).responseData = data
+      throw err
     }
 
     return data as T
