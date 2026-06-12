@@ -10,10 +10,15 @@ interface Turma {
   id: number
   codigo: string
   horario: string
-  dias: string
+  dias: string | string[]
   modalidade: string
   vagas: number
   checkedIn: boolean
+}
+
+function formatDias(dias: string | string[]): string {
+  if (Array.isArray(dias)) return dias.join(', ')
+  return dias
 }
 
 interface HistoricoItem {
@@ -33,25 +38,28 @@ export default function TabCheckin() {
     retry: false,
   })
 
-  useEffect(() => {
+  function fetchTurmas() {
+    setLoading(true)
     api.get<Turma[]>('/turmas')
       .then(setTurmas)
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }
+
+  useEffect(() => { fetchTurmas() }, [])
 
   async function handleCheckin(turma: Turma) {
     setActionId(turma.id)
     try {
       if (turma.checkedIn) {
         await api.delete(`/checkin/${turma.id}`)
-        setTurmas(prev => prev.map(t => t.id === turma.id ? { ...t, checkedIn: false } : t))
         toast.success('Check-in cancelado.')
       } else {
         await api.post('/checkin', { turmaId: turma.id })
-        setTurmas(prev => prev.map(t => t.id === turma.id ? { ...t, checkedIn: true } : t))
         toast.success('Check-in realizado com sucesso!')
       }
+      // re-fetch from server to ensure state is accurate
+      fetchTurmas()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao processar check-in.'
       toast.error(msg)
@@ -102,7 +110,7 @@ export default function TabCheckin() {
                     <div>
                       <p className="text-sm font-medium">{t.modalidade}</p>
                       <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
-                        <Clock size={11} /> {t.horario} · {t.dias}
+                        <Clock size={11} /> {t.horario} · {formatDias(t.dias)}
                         {t.codigo && t.codigo !== '—' && (
                           <span className="ml-1 bg-gorila-primary text-white text-[10px] px-1.5 py-0.5 rounded">{t.codigo}</span>
                         )}
@@ -132,7 +140,7 @@ export default function TabCheckin() {
                   <div>
                     <p className="text-sm font-medium">{t.modalidade}</p>
                     <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
-                      <Clock size={11} /> {t.horario} · {t.dias}
+                      <Clock size={11} /> {t.horario} · {formatDias(t.dias)}
                       {t.codigo && t.codigo !== '—' && (
                         <span className="ml-1 bg-gorila-primary text-white text-[10px] px-1.5 py-0.5 rounded">{t.codigo}</span>
                       )}
