@@ -24,6 +24,7 @@ import {
   TrendingUp,
   Menu,
   X,
+  CalendarDays,
 } from 'lucide-react'
 
 function iniciais(nome: string) {
@@ -63,6 +64,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/admin/financeiro', label: 'Financeiro', icon: DollarSign },
       { to: '/admin/notificacoes', label: 'Notificações', icon: Bell },
+      { to: '/admin/eventos', label: 'Eventos / Jogos', icon: CalendarDays },
     ],
   },
   {

@@ -46,6 +46,7 @@ import CheckinAdmin from "./pages/admin/CheckinAdmin"
 import Turmas from "./pages/admin/Turmas"
 import AdminAnamneses from "./pages/admin/AdminAnamneses"
 import AdminDesempenho from "./pages/admin/AdminDesempenho"
+import AdminEventos from "./pages/admin/AdminEventos"
 import ProjetoPage from "./pages/projetos/ProjetoPage";
 import Termos from "./pages/Termos";
 import Privacidade from "./pages/Privacidade";
@@ -99,6 +100,7 @@ const App = () => (
             <Route path="premiacoes" element={<Premiacoes />} />
             <Route path="patrocinadores" element={<Patrocinadores />} />
             <Route path="leads" element={<Leads />} />
+            <Route path="eventos" element={<AdminEventos />} />
             <Route path="projetos" element={<AdminProjetos />} />
             <Route path="documentos" element={<AdminDocumentos />} />
             <Route path="configuracoes" element={<Configuracoes />} />

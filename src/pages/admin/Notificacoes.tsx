@@ -7,6 +7,7 @@ interface Notificacao {
   titulo: string
   corpo: string
   tipo: 'AVISO' | 'EVENTO' | 'COMUNICADO'
+  destinatarioRole?: string | null
   criadoEm: string
 }
 
@@ -16,11 +17,18 @@ const TIPO_COLORS: Record<string, string> = {
   EVENTO: 'bg-blue-500/20 text-blue-400',
   COMUNICADO: 'bg-purple-500/20 text-purple-400',
 }
+const DESTINATARIOS: Record<string, string> = {
+  '':               'Todos',
+  'ATLETA':         'Atletas',
+  'TREINADOR':      'Treinadores',
+  'SOCIO_TORCEDOR': 'Sócios Torcedores',
+  'ADMIN':          'Administradores',
+}
 
 export default function Notificacoes() {
   const [items, setItems] = useState<Notificacao[]>([])
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ titulo: '', corpo: '', tipo: 'AVISO' as const })
+  const [form, setForm] = useState({ titulo: '', corpo: '', tipo: 'AVISO' as const, destinatarioRole: '' })
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
 
@@ -35,9 +43,10 @@ export default function Notificacoes() {
     e.preventDefault()
     setSending(true); setError('')
     try {
-      const novo = await api.post<Notificacao>('/notificacoes', form)
+      const payload = { ...form, destinatarioRole: form.destinatarioRole || null }
+      const novo = await api.post<Notificacao>('/notificacoes', payload)
       setItems(prev => [novo, ...prev])
-      setForm({ titulo: '', corpo: '', tipo: 'AVISO' })
+      setForm({ titulo: '', corpo: '', tipo: 'AVISO', destinatarioRole: '' })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erro ao enviar')
     } finally {
@@ -64,7 +73,7 @@ export default function Notificacoes() {
         <h3 className="font-semibold flex items-center gap-2"><Bell size={16} className="text-yellow-400" /> Nova Mensagem</h3>
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-1">
             <label className="block text-xs text-zinc-400 mb-1">Título <span className="text-red-400">*</span></label>
             <input required value={form.titulo} onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))}
               placeholder="ex: Aviso de feriado"
@@ -75,6 +84,13 @@ export default function Notificacoes() {
             <select value={form.tipo} onChange={e => setForm(p => ({ ...p, tipo: e.target.value as typeof form.tipo }))}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
               {Object.entries(TIPOS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Destinatário</label>
+            <select value={form.destinatarioRole} onChange={e => setForm(p => ({ ...p, destinatarioRole: e.target.value }))}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+              {Object.entries(DESTINATARIOS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
         </div>
@@ -101,8 +117,13 @@ export default function Notificacoes() {
             <div key={n.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TIPO_COLORS[n.tipo]}`}>{TIPOS[n.tipo]}</span>
+                    {n.destinatarioRole && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">
+                        → {DESTINATARIOS[n.destinatarioRole] ?? n.destinatarioRole}
+                      </span>
+                    )}
                     <p className="font-semibold text-sm">{n.titulo}</p>
                   </div>
                   <p className="text-sm text-zinc-400 leading-relaxed">{n.corpo}</p>
