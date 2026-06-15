@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { Plus, Pencil, Loader2, X, CheckCircle, XCircle } from 'lucide-react'
+import { Plus, Pencil, Loader2, X, CheckCircle, XCircle, Users, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 type StatusTurma = 'PROPOSTA' | 'PENDENTE_APROVACAO' | 'ATIVA' | 'INATIVA'
@@ -229,6 +229,132 @@ function ModalTurma({
   )
 }
 
+interface AtletaItem { id: number; nome: string; email: string }
+
+function ModalAtletas({ turma, onClose }: { turma: Turma; onClose: () => void }) {
+  const [inscritos, setInscritos] = useState<AtletaItem[]>([])
+  const [disponiveis, setDisponiveis] = useState<AtletaItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selecionado, setSelecionado] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [removingId, setRemovingId] = useState<number | null>(null)
+  const [erro, setErro] = useState('')
+
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', esc)
+    return () => document.removeEventListener('keydown', esc)
+  }, [onClose])
+
+  useEffect(() => {
+    Promise.all([
+      api.get<AtletaItem[]>(`/admin/turmas/${turma.id}/atletas`),
+      api.get<AtletaItem[]>('/admin/usuarios?role=ATLETA&ativo=true').catch(() => [] as AtletaItem[]),
+    ]).then(([ins, disp]) => {
+      setInscritos(ins)
+      setDisponiveis(disp)
+    }).catch(e => setErro(e.message))
+      .finally(() => setLoading(false))
+  }, [turma.id])
+
+  const naoInscritos = disponiveis.filter(d => !inscritos.some(i => i.id === d.id))
+
+  async function handleAdd() {
+    if (!selecionado) return
+    setAdding(true); setErro('')
+    try {
+      await api.post(`/admin/turmas/${turma.id}/atletas`, { atletaId: Number(selecionado) })
+      const novo = disponiveis.find(d => d.id === Number(selecionado))!
+      setInscritos(prev => [...prev, novo])
+      setSelecionado('')
+    } catch (e: any) {
+      setErro(e.message ?? 'Erro ao adicionar atleta.')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  async function handleRemove(atletaId: number) {
+    setRemovingId(atletaId); setErro('')
+    try {
+      await api.delete(`/admin/turmas/${turma.id}/atletas/${atletaId}`)
+      setInscritos(prev => prev.filter(a => a.id !== atletaId))
+    } catch (e: any) {
+      setErro(e.message ?? 'Erro ao remover atleta.')
+    } finally {
+      setRemovingId(null)
+    }
+  }
+
+  const inp = 'flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gorila-yellow'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true"
+        className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md shadow-2xl max-h-[85vh] flex flex-col"
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Users size={18} className="text-gorila-yellow" />
+            Atletas — {turma.codigo}
+          </h2>
+          <button onClick={onClose} className="text-zinc-500 hover:text-white"><X size={18} /></button>
+        </div>
+
+        {/* Adicionar */}
+        <div className="flex gap-2 mb-4">
+          <select value={selecionado} onChange={e => setSelecionado(e.target.value)} className={inp}>
+            <option value="">Selecionar atleta...</option>
+            {naoInscritos.map(a => (
+              <option key={a.id} value={a.id}>{a.nome}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleAdd}
+            disabled={adding || !selecionado}
+            className="flex items-center gap-1 bg-gorila-yellow text-zinc-900 px-3 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-300 disabled:opacity-50 transition-colors whitespace-nowrap">
+            {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+            Adicionar
+          </button>
+        </div>
+
+        {erro && <p className="text-red-400 text-xs mb-3">{erro}</p>}
+
+        {/* Lista inscritos */}
+        <div className="flex-1 overflow-y-auto space-y-1">
+          {loading ? (
+            <div className="space-y-2">
+              {[1,2,3].map(i => <div key={i} className="h-10 bg-zinc-800 rounded-lg animate-pulse" />)}
+            </div>
+          ) : inscritos.length === 0 ? (
+            <p className="text-center text-zinc-500 text-sm py-8">Nenhum atleta inscrito nesta turma.</p>
+          ) : (
+            inscritos.map(a => (
+              <div key={a.id} className="flex items-center justify-between bg-zinc-800/60 border border-zinc-700/50 rounded-lg px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium text-zinc-200">{a.nome}</p>
+                  <p className="text-xs text-zinc-500">{a.email}</p>
+                </div>
+                <button
+                  onClick={() => handleRemove(a.id)}
+                  disabled={removingId === a.id}
+                  className="text-zinc-500 hover:text-red-400 transition-colors p-1 rounded disabled:opacity-50"
+                  title="Remover atleta">
+                  {removingId === a.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        <p className="text-xs text-zinc-600 mt-3 text-right">
+          {inscritos.length} / {turma.capacidade} atleta(s)
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export default function Turmas() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN'
@@ -240,6 +366,7 @@ export default function Turmas() {
   const [novaModal, setNovaModal] = useState(false)
   const [editando, setEditando] = useState<Turma | null>(null)
   const [statusLoading, setStatusLoading] = useState<number | null>(null)
+  const [atletasModal, setAtletasModal] = useState<Turma | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -277,6 +404,9 @@ export default function Turmas() {
 
   return (
     <div className="px-4 py-5 md:p-8">
+      {atletasModal && (
+        <ModalAtletas turma={atletasModal} onClose={() => setAtletasModal(null)} />
+      )}
       {novaModal && (
         <ModalTurma
           ambientes={ambientes} treinadores={treinadores}
@@ -350,6 +480,10 @@ export default function Turmas() {
                         <button onClick={() => setEditando(t)}
                           className="flex items-center gap-1 text-xs text-zinc-400 hover:text-gorila-yellow transition-colors px-2 py-1 rounded hover:bg-zinc-800">
                           <Pencil size={12} /> Editar
+                        </button>
+                        <button onClick={() => setAtletasModal(t)}
+                          className="flex items-center gap-1 text-xs text-zinc-400 hover:text-blue-400 transition-colors px-2 py-1 rounded hover:bg-zinc-800">
+                          <Users size={12} /> Atletas
                         </button>
                         {t.status === 'PENDENTE_APROVACAO' && (
                           <>
