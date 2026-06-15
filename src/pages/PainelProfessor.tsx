@@ -14,7 +14,7 @@ import DietPrescription from '@/components/DietPrescription'
 import {
   LayoutDashboard, Users, Dumbbell, CheckCircle, FileText,
   LogOut, ChevronRight, Target, BarChart3, Shield, Plus, Trash2,
-  Calendar, Trophy, AlertCircle, Salad, Pencil, Camera,
+  Calendar, Trophy, AlertCircle, Salad, Pencil, Camera, GraduationCap, XCircle,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -101,6 +101,7 @@ const MENU = [
   { id: 'atletas',    label: 'Meus Atletas',       short: 'Atletas',   icon: Users },
   { id: 'prescricao', label: 'Prescrever Treino',  short: 'Treinos',   icon: Dumbbell },
   { id: 'checkin',    label: 'Check-in / Turmas',  short: 'Check-in',  icon: CheckCircle },
+  { id: 'minhas-turmas', label: 'Minhas Turmas',   short: 'Turmas',    icon: GraduationCap },
   { id: 'anamneses',  label: 'Fichas de Anamnese', short: 'Anamnese',  icon: FileText },
   { id: 'desempenho', label: 'Desempenho',         short: 'Desempen.', icon: BarChart3 },
   { id: 'escalacao',  label: 'Escalação',          short: 'Escalação', icon: Target },
@@ -401,6 +402,223 @@ interface TurmaCheckin {
   descricao: string
   capacidade: number
   checkins: { id: number; atletaNome: string; atletaEmail: string }[]
+}
+
+// ── Tab: Minhas Turmas (professor) ─────────────────────────────────────────
+type StatusTurma = 'PROPOSTA' | 'PENDENTE_APROVACAO' | 'ATIVA' | 'INATIVA'
+interface TurmaProfessor {
+  id: number
+  codigo: string
+  horario: string
+  dias: string | string[]
+  tipo: string
+  descricao?: string
+  faixaIdade?: string
+  capacidade: number
+  status: StatusTurma
+  ambiente?: { id: number; nome: string } | null
+}
+
+const STATUS_LABEL_PROF: Record<StatusTurma, string> = {
+  PROPOSTA: 'Proposta pelo admin',
+  PENDENTE_APROVACAO: 'Aguardando aprovação',
+  ATIVA: 'Ativa',
+  INATIVA: 'Inativa',
+}
+const STATUS_COLOR_PROF: Record<StatusTurma, string> = {
+  PROPOSTA: 'bg-zinc-600/30 text-zinc-300 border-zinc-500',
+  PENDENTE_APROVACAO: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  ATIVA: 'bg-green-500/20 text-green-400 border-green-500/30',
+  INATIVA: 'bg-red-500/10 text-red-400 border-red-500/20',
+}
+const DIAS_SEMANA_PROF = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
+
+function formatDiasTurma(dias: string | string[]): string {
+  if (Array.isArray(dias)) return dias.join(', ')
+  return dias
+}
+
+function TabTurmasProfessor() {
+  const [turmas, setTurmas] = useState<TurmaProfessor[]>([])
+  const [loading, setLoading] = useState(true)
+  const [actionId, setActionId] = useState<number | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ codigo: '', horario: '', dias: [] as string[], tipo: 'regular', descricao: '', faixaIdade: '', capacidade: 6 })
+  const [formError, setFormError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  function fetchTurmas() {
+    setLoading(true)
+    api.get<TurmaProfessor[]>('/professor/turmas')
+      .then(setTurmas)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { fetchTurmas() }, [])
+
+  async function handleAceitar(id: number) {
+    setActionId(id)
+    try {
+      await api.patch(`/professor/turmas/${id}/aceitar`, {})
+      fetchTurmas()
+      toast.success('Turma aceita!')
+    } catch (e: any) {
+      toast.error(e.message ?? 'Erro ao aceitar.')
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  async function handleRejeitar(id: number) {
+    setActionId(id)
+    try {
+      await api.patch(`/professor/turmas/${id}/rejeitar`, {})
+      fetchTurmas()
+      toast.success('Turma rejeitada.')
+    } catch (e: any) {
+      toast.error(e.message ?? 'Erro ao rejeitar.')
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  function toggleDia(dia: string) {
+    setForm(f => ({ ...f, dias: f.dias.includes(dia) ? f.dias.filter(d => d !== dia) : [...f.dias, dia] }))
+  }
+
+  async function handleNovaTurma(e: React.FormEvent) {
+    e.preventDefault()
+    if (form.dias.length === 0) return setFormError('Selecione pelo menos um dia.')
+    setSaving(true); setFormError('')
+    try {
+      await api.post('/professor/turmas', { ...form, capacidade: Number(form.capacidade) })
+      fetchTurmas()
+      setShowForm(false)
+      toast.success('Turma criada e enviada para aprovação.')
+    } catch (err: any) {
+      setFormError(err.message ?? 'Erro ao criar turma.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inp = 'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gorila-yellow'
+
+  return (
+    <div className="space-y-5">
+      <Card className="bg-zinc-900 border-zinc-800">
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardTitle className="text-gorila-yellow text-sm font-semibold flex items-center gap-2">
+            <GraduationCap size={16} /> Minhas Turmas
+          </CardTitle>
+          <button onClick={() => setShowForm(v => !v)}
+            className="flex items-center gap-1.5 text-xs bg-gorila-yellow text-gorila-primary font-semibold px-3 py-1.5 rounded-lg hover:bg-yellow-300 transition-colors">
+            <Plus size={13} /> Nova Turma
+          </button>
+        </CardHeader>
+        {showForm && (
+          <div className="px-6 pb-5">
+            <form onSubmit={handleNovaTurma} className="space-y-3 border-t border-zinc-800 pt-4">
+              <p className="text-xs text-zinc-400">Nova turma será enviada para aprovação do admin.</p>
+              {formError && <p className="text-red-400 text-xs">{formError}</p>}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-zinc-400 mb-1 block">Código *</label>
+                  <input required value={form.codigo} onChange={e => setForm(f => ({ ...f, codigo: e.target.value }))} className={inp} placeholder="Ex: BJJ-T1" />
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-400 mb-1 block">Horário *</label>
+                  <input required value={form.horario} onChange={e => setForm(f => ({ ...f, horario: e.target.value }))} className={inp} placeholder="Ex: 07:00–08:00" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 mb-1.5 block">Dias *</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DIAS_SEMANA_PROF.map(d => (
+                    <button key={d} type="button" onClick={() => toggleDia(d)}
+                      className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${
+                        form.dias.includes(d)
+                          ? 'bg-gorila-yellow/20 text-gorila-yellow border-gorila-yellow/40'
+                          : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                      }`}>{d}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-zinc-400 mb-1 block">Tipo</label>
+                  <select value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))} className={inp}>
+                    <option value="regular">Regular</option>
+                    <option value="kids">Kids</option>
+                    <option value="competicao">Competição</option>
+                    <option value="open">Open</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-400 mb-1 block">Capacidade</label>
+                  <input type="number" min={1} value={form.capacidade} onChange={e => setForm(f => ({ ...f, capacidade: Number(e.target.value) }))} className={inp} />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400 mb-1 block">Descrição</label>
+                <input value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} className={inp} placeholder="Opcional" />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" disabled={saving}
+                  className="bg-gorila-yellow text-gorila-primary text-xs font-bold px-4 py-2 rounded-lg hover:bg-yellow-300 disabled:opacity-50">
+                  {saving ? 'Enviando...' : 'Enviar para aprovação'}
+                </button>
+                <button type="button" onClick={() => setShowForm(false)}
+                  className="text-xs text-zinc-400 px-4 py-2 rounded-lg border border-zinc-700 hover:border-zinc-500">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </Card>
+
+      {loading ? (
+        <div className="space-y-2">{[1,2].map(i => <div key={i} className="h-16 bg-zinc-900 rounded-lg animate-pulse" />)}</div>
+      ) : turmas.length === 0 ? (
+        <Card className="bg-zinc-900 border-zinc-800">
+          <div className="py-10 text-center text-zinc-500 text-sm">Você não está vinculado a nenhuma turma.</div>
+        </Card>
+      ) : turmas.map(t => (
+        <Card key={t.id} className="bg-zinc-900 border-zinc-800">
+          <CardContent className="py-4 px-4 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="font-mono text-sm font-bold text-white">{t.codigo}</span>
+                <span className={`text-xs px-1.5 py-0.5 rounded-full border ${STATUS_COLOR_PROF[t.status]}`}>
+                  {STATUS_LABEL_PROF[t.status]}
+                </span>
+              </div>
+              <p className="text-xs text-zinc-400">{t.horario} · {formatDiasTurma(t.dias)}</p>
+              {t.ambiente && <p className="text-xs text-zinc-500 mt-0.5">{t.ambiente.nome}</p>}
+            </div>
+            {t.status === 'PROPOSTA' && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleAceitar(t.id)}
+                  disabled={actionId === t.id}
+                  className="flex items-center gap-1 text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-lg hover:bg-green-500/30 disabled:opacity-50 transition-colors">
+                  <CheckCircle size={12} /> {actionId === t.id ? '...' : 'Aceitar'}
+                </button>
+                <button
+                  onClick={() => handleRejeitar(t.id)}
+                  disabled={actionId === t.id}
+                  className="flex items-center gap-1 text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1.5 rounded-lg hover:bg-red-500/20 disabled:opacity-50 transition-colors">
+                  <XCircle size={12} /> {actionId === t.id ? '...' : 'Rejeitar'}
+                </button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
 }
 
 function TabCheckin() {
@@ -1004,8 +1222,9 @@ export default function PainelProfessor() {
               </Card>
             )}
 
-            {tab === 'prescricao' && <TabPrescricao atletas={atletas} />}
-            {tab === 'checkin'    && <TabCheckin />}
+            {tab === 'prescricao'    && <TabPrescricao atletas={atletas} />}
+            {tab === 'checkin'       && <TabCheckin />}
+            {tab === 'minhas-turmas' && <TabTurmasProfessor />}
             {tab === 'anamneses'  && <TabAnamneses />}
             {tab === 'desempenho' && <TabDesempenho atletas={atletas} />}
             {tab === 'dieta'      && <DietPrescription userName={user.nome} />}

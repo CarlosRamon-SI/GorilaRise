@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
+import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -14,7 +15,6 @@ import { UserPlus, Check, Loader2, XCircle, CheckCircle2, MapPin, Eye, EyeOff } 
 import { api } from '@/lib/api';
 import { validarCPF, calcForca } from '@/lib/validators';
 import { fmt } from '@/lib/masks';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface Plano { id: number; nome: string; valor: string }
 
@@ -38,7 +38,6 @@ function renderEmailIcon(status: EmailStatus) {
 const Req = () => <span className="text-red-500 ml-0.5" aria-hidden>*</span>
 
 const Cadastro = () => {
-  const navigate       = useNavigate()
   const location       = useLocation()
   const planoIdInicial = String((location.state as any)?.planoId ?? '')
 
@@ -55,7 +54,8 @@ const Cadastro = () => {
   const [showSenha, setShowSenha]     = useState(false)
   const [showConfirmar, setShowConfirmar] = useState(false)
 
-  const { login } = useAuth()
+  const [captchaToken, setCaptchaToken] = useState('')
+  const captchaRef = useRef<HCaptcha>(null)
 
   const [cpfStatus, setCpfStatus]     = useState<CpfStatus>('idle')
   const [emailStatus, setEmailStatus] = useState<EmailStatus>('idle')
@@ -162,6 +162,7 @@ const Cadastro = () => {
     if (formData.senha.length < 8) return setError('Senha deve ter mínimo 8 caracteres.')
     if (formData.senha !== formData.confirmarSenha) return setError('As senhas não coincidem.')
     if (!termos) return setError('Aceite os termos e condições para continuar.')
+    if (!captchaToken) return setError('Confirme que você não é um robô.')
 
     setIsLoading(true)
     try {
@@ -170,17 +171,15 @@ const Cadastro = () => {
         telefone: formData.telefone, nascimento: formData.nascimento,
         endereco: formData.endereco, cidade: formData.cidade, cep: formData.cep,
         senha: formData.senha,
+        captchaToken,
       }
       if (formData.planoId) body.planoId = Number(formData.planoId)
 
-      const res = await api.post<{
-        usuario: { id: number; nome: string; email: string; role: 'ATLETA' | 'TREINADOR' | 'ADMIN' | 'SOCIO_TORCEDOR' }
-        token: string
-      }>('/auth/cadastro', body)
-      login(res.token, res.usuario)
+      await api.post<{ mensagem: string }>('/auth/cadastro', body)
       setSuccess(true)
-      setTimeout(() => navigate('/painel'), 3000)
     } catch (err: any) {
+      captchaRef.current?.resetCaptcha()
+      setCaptchaToken('')
       const fieldErrors = err.responseData?.details?.fieldErrors as Record<string, string[]> | undefined
       if (fieldErrors && Object.keys(fieldErrors).length > 0) {
         const labels: Record<string, string> = {
@@ -209,10 +208,9 @@ const Cadastro = () => {
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
                   <Check className="text-green-600" size={32} />
                 </div>
-                <h2 className="text-2xl font-bold text-gorila-primary">Bem-vindo ao Bando!</h2>
+                <h2 className="text-2xl font-bold text-gorila-primary">Cadastro Realizado!</h2>
                 <p className="text-gray-600">Sua conta foi criada com sucesso.</p>
-                <p className="text-sm text-gray-500">Nosso treinador entrará em contato para definir sua modalidade e confirmar seu plano.</p>
-                <div className="mt-6 w-full bg-gorila-yellow h-1.5 rounded-full animate-pulse" />
+                <p className="text-sm text-gray-500">Nossa equipe irá ativá-la em breve. Você receberá uma confirmação quando puder acessar o sistema.</p>
               </CardContent>
             </Card>
           </div>
@@ -440,6 +438,16 @@ const Cadastro = () => {
                     </Link>
                     {' '}do Gorila Rise. <Req />
                   </Label>
+                </div>
+
+                {/* CAPTCHA */}
+                <div className="flex justify-center">
+                  <HCaptcha
+                    sitekey={import.meta.env.VITE_HCAPTCHA_SITE_KEY ?? '10000000-ffff-ffff-ffff-000000000001'}
+                    onVerify={token => setCaptchaToken(token)}
+                    onExpire={() => setCaptchaToken('')}
+                    ref={captchaRef}
+                  />
                 </div>
 
                 {error && (

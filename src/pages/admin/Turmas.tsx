@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { Plus, Pencil, Loader2, X, Power } from 'lucide-react'
+import { Plus, Pencil, Loader2, X, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+
+type StatusTurma = 'PROPOSTA' | 'PENDENTE_APROVACAO' | 'ATIVA' | 'INATIVA'
+
+interface Ambiente { id: number; nome: string; capacidade: number; ativo: boolean }
+interface Treinador { id: number; nome: string }
 
 interface Turma {
   id: number
@@ -12,20 +17,54 @@ interface Turma {
   descricao?: string
   faixaIdade?: string
   capacidade: number
-  ativa: boolean
+  status: StatusTurma
+  ambienteId?: number | null
+  treinadorId?: number | null
+  ambiente?: Ambiente | null
+  treinador?: Treinador | null
+}
+
+const STATUS_LABEL: Record<StatusTurma, string> = {
+  PROPOSTA: 'Proposta',
+  PENDENTE_APROVACAO: 'Aguardando aprovação',
+  ATIVA: 'Ativa',
+  INATIVA: 'Inativa',
+}
+const STATUS_COLOR: Record<StatusTurma, string> = {
+  PROPOSTA: 'bg-zinc-600 text-zinc-300 border-zinc-500',
+  PENDENTE_APROVACAO: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  ATIVA: 'bg-green-500/20 text-green-400 border-green-500/30',
+  INATIVA: 'bg-red-500/10 text-red-400 border-red-500/20',
 }
 
 const DIAS_SEMANA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
-
-const BLANK = { codigo: '', horario: '', dias: [] as string[], tipo: 'regular', descricao: '', faixaIdade: '', capacidade: 6 }
+const BLANK = {
+  codigo: '', horario: '', dias: [] as string[], tipo: 'regular',
+  descricao: '', faixaIdade: '', capacidade: 6,
+  ambienteId: '' as string | number, treinadorId: '' as string | number,
+  status: 'ATIVA' as StatusTurma,
+}
 
 function ModalTurma({
-  turma, onClose, onSalvo,
-}: { turma?: Turma; onClose: () => void; onSalvo: (t: Turma) => void }) {
+  turma, ambientes, treinadores, onClose, onSalvo,
+}: {
+  turma?: Turma
+  ambientes: Ambiente[]
+  treinadores: Treinador[]
+  onClose: () => void
+  onSalvo: (t: Turma) => void
+}) {
   const [form, setForm] = useState(turma ? {
-    codigo: turma.codigo, horario: turma.horario, dias: turma.dias,
-    tipo: turma.tipo, descricao: turma.descricao ?? '', faixaIdade: turma.faixaIdade ?? '',
+    codigo: turma.codigo,
+    horario: turma.horario,
+    dias: turma.dias,
+    tipo: turma.tipo,
+    descricao: turma.descricao ?? '',
+    faixaIdade: turma.faixaIdade ?? '',
     capacidade: turma.capacidade,
+    ambienteId: turma.ambienteId ?? '' as string | number,
+    treinadorId: turma.treinadorId ?? '' as string | number,
+    status: turma.status,
   } : BLANK)
   const [saving, setSaving] = useState(false)
   const [erro, setErro] = useState('')
@@ -46,19 +85,21 @@ function ModalTurma({
     if (form.dias.length === 0) return setErro('Selecione pelo menos um dia.')
     setSaving(true)
     try {
-      if (turma) {
-        const t = await api.patch<Turma>(`/admin/turmas/${turma.id}`, {
-          horario: form.horario, dias: form.dias, tipo: form.tipo,
-          descricao: form.descricao, faixaIdade: form.faixaIdade, capacidade: Number(form.capacidade),
-        })
-        onSalvo(t)
-      } else {
-        const t = await api.post<Turma>('/admin/turmas', {
-          codigo: form.codigo, horario: form.horario, dias: form.dias, tipo: form.tipo,
-          descricao: form.descricao, faixaIdade: form.faixaIdade, capacidade: Number(form.capacidade),
-        })
-        onSalvo(t)
+      const payload = {
+        horario: form.horario, dias: form.dias, tipo: form.tipo,
+        descricao: form.descricao, faixaIdade: form.faixaIdade,
+        capacidade: Number(form.capacidade),
+        ambienteId: form.ambienteId !== '' ? Number(form.ambienteId) : null,
+        treinadorId: form.treinadorId !== '' ? Number(form.treinadorId) : null,
+        status: form.status,
       }
+      let t: Turma
+      if (turma) {
+        t = await api.patch<Turma>(`/admin/turmas/${turma.id}`, payload)
+      } else {
+        t = await api.post<Turma>('/admin/turmas', { ...payload, codigo: form.codigo })
+      }
+      onSalvo(t)
       onClose()
     } catch (e: any) {
       setErro(e.message ?? 'Erro ao salvar turma.')
@@ -72,7 +113,7 @@ function ModalTurma({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div role="dialog" aria-modal="true"
-        className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold flex items-center gap-2">
@@ -127,6 +168,36 @@ function ModalTurma({
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Ambiente</label>
+              <select value={form.ambienteId} onChange={e => setForm(f => ({ ...f, ambienteId: e.target.value }))} className={inp}>
+                <option value="">Sem ambiente</option>
+                {ambientes.filter(a => a.ativo).map(a => (
+                  <option key={a.id} value={a.id}>{a.nome} ({a.capacidade})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Treinador</label>
+              <select value={form.treinadorId} onChange={e => setForm(f => ({ ...f, treinadorId: e.target.value }))} className={inp}>
+                <option value="">Sem treinador</option>
+                {treinadores.map(t => (
+                  <option key={t.id} value={t.id}>{t.nome}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-zinc-400 mb-1 block">Status</label>
+            <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as StatusTurma }))} className={inp}>
+              <option value="ATIVA">Ativa</option>
+              <option value="PROPOSTA">Proposta (aguarda aceite do treinador)</option>
+              <option value="INATIVA">Inativa</option>
+            </select>
+          </div>
+
           <div>
             <label className="text-xs text-zinc-400 mb-1 block">Faixa etária</label>
             <input type="text" value={form.faixaIdade} onChange={e => setForm(f => ({ ...f, faixaIdade: e.target.value }))}
@@ -162,29 +233,37 @@ export default function Turmas() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN'
   const [turmas, setTurmas] = useState<Turma[]>([])
+  const [ambientes, setAmbientes] = useState<Ambiente[]>([])
+  const [treinadores, setTreinadores] = useState<Treinador[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [novaModal, setNovaModal] = useState(false)
   const [editando, setEditando] = useState<Turma | null>(null)
-  const [toggling, setToggling] = useState<number | null>(null)
+  const [statusLoading, setStatusLoading] = useState<number | null>(null)
 
   useEffect(() => {
-    api.get<Turma[]>('/admin/turmas')
-      .then(setTurmas)
-      .catch((e) => setError(e.message))
+    Promise.all([
+      api.get<Turma[]>('/admin/turmas'),
+      api.get<Ambiente[]>('/admin/ambientes').catch(() => [] as Ambiente[]),
+      api.get<Treinador[]>('/admin/usuarios?role=TREINADOR&ativo=true').catch(() => [] as Treinador[]),
+    ]).then(([t, a, tr]) => {
+      setTurmas(t)
+      setAmbientes(a)
+      setTreinadores(tr)
+    }).catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [])
 
-  async function toggleAtiva(t: Turma) {
+  async function handleStatusChange(t: Turma, novoStatus: StatusTurma) {
     if (!isAdmin) return
-    setToggling(t.id)
+    setStatusLoading(t.id)
     try {
-      const updated = await api.patch<Turma>(`/admin/turmas/${t.id}`, { ativa: !t.ativa })
-      setTurmas(prev => prev.map(x => x.id === t.id ? { ...x, ativa: updated.ativa } : x))
+      const updated = await api.patch<Turma>(`/admin/turmas/${t.id}/status`, { status: novoStatus })
+      setTurmas(prev => prev.map(x => x.id === t.id ? { ...x, ...updated } : x))
     } catch (e: any) {
       alert(e.message)
     } finally {
-      setToggling(null)
+      setStatusLoading(null)
     }
   }
 
@@ -198,8 +277,18 @@ export default function Turmas() {
 
   return (
     <div className="px-4 py-5 md:p-8">
-      {novaModal && <ModalTurma onClose={() => setNovaModal(false)} onSalvo={onSalvo} />}
-      {editando && <ModalTurma turma={editando} onClose={() => setEditando(null)} onSalvo={onSalvo} />}
+      {novaModal && (
+        <ModalTurma
+          ambientes={ambientes} treinadores={treinadores}
+          onClose={() => setNovaModal(false)} onSalvo={onSalvo}
+        />
+      )}
+      {editando && (
+        <ModalTurma
+          turma={editando} ambientes={ambientes} treinadores={treinadores}
+          onClose={() => setEditando(null)} onSalvo={onSalvo}
+        />
+      )}
 
       <div className="flex items-start justify-between mb-1">
         <h1 className="text-2xl font-bold">Turmas</h1>
@@ -222,13 +311,14 @@ export default function Turmas() {
         </div>
       ) : (
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-x-auto">
-          <table className="w-full text-sm min-w-[580px]">
+          <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="border-b border-zinc-800 text-zinc-400 text-left">
                 <th className="px-4 py-3 font-medium">Código</th>
                 <th className="px-4 py-3 font-medium">Horário</th>
                 <th className="px-4 py-3 font-medium">Dias</th>
-                <th className="px-4 py-3 font-medium">Tipo</th>
+                <th className="px-4 py-3 font-medium">Ambiente</th>
+                <th className="px-4 py-3 font-medium">Treinador</th>
                 <th className="px-4 py-3 font-medium">Cap.</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 {isAdmin && <th className="px-4 py-3 font-medium">Ações</th>}
@@ -246,27 +336,49 @@ export default function Turmas() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-zinc-400 capitalize">{t.tipo}</td>
+                  <td className="px-4 py-3 text-zinc-400 text-xs">{t.ambiente?.nome ?? '—'}</td>
+                  <td className="px-4 py-3 text-zinc-400 text-xs">{t.treinador?.nome ?? '—'}</td>
                   <td className="px-4 py-3 text-zinc-400">{t.capacidade}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${
-                      t.ativa ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-zinc-700 text-zinc-400 border-zinc-600'
-                    }`}>{t.ativa ? 'Ativa' : 'Inativa'}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_COLOR[t.status]}`}>
+                      {STATUS_LABEL[t.status]}
+                    </span>
                   </td>
                   {isAdmin && (
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-wrap">
                         <button onClick={() => setEditando(t)}
                           className="flex items-center gap-1 text-xs text-zinc-400 hover:text-gorila-yellow transition-colors px-2 py-1 rounded hover:bg-zinc-800">
                           <Pencil size={12} /> Editar
                         </button>
-                        <button onClick={() => toggleAtiva(t)} disabled={toggling === t.id}
-                          className={`flex items-center gap-1 text-xs transition-colors px-2 py-1 rounded hover:bg-zinc-800 disabled:opacity-50 ${
-                            t.ativa ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'
-                          }`}>
-                          <Power size={12} />
-                          {toggling === t.id ? '…' : t.ativa ? 'Desativar' : 'Ativar'}
-                        </button>
+                        {t.status === 'PENDENTE_APROVACAO' && (
+                          <>
+                            <button
+                              onClick={() => handleStatusChange(t, 'ATIVA')}
+                              disabled={statusLoading === t.id}
+                              className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 px-2 py-1 rounded hover:bg-zinc-800 disabled:opacity-50 transition-colors">
+                              <CheckCircle size={12} />
+                              {statusLoading === t.id ? '…' : 'Aprovar'}
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(t, 'INATIVA')}
+                              disabled={statusLoading === t.id}
+                              className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-zinc-800 disabled:opacity-50 transition-colors">
+                              <XCircle size={12} />
+                              {statusLoading === t.id ? '…' : 'Rejeitar'}
+                            </button>
+                          </>
+                        )}
+                        {t.status !== 'PENDENTE_APROVACAO' && (
+                          <button
+                            onClick={() => handleStatusChange(t, t.status === 'ATIVA' ? 'INATIVA' : 'ATIVA')}
+                            disabled={statusLoading === t.id}
+                            className={`flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-zinc-800 disabled:opacity-50 transition-colors ${
+                              t.status === 'ATIVA' ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'
+                            }`}>
+                            {statusLoading === t.id ? '…' : t.status === 'ATIVA' ? 'Desativar' : 'Ativar'}
+                          </button>
+                        )}
                       </div>
                     </td>
                   )}

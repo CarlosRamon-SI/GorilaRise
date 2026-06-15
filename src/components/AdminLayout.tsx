@@ -25,6 +25,7 @@ import {
   Menu,
   X,
   CalendarDays,
+  MapPin,
 } from 'lucide-react'
 
 function iniciais(nome: string) {
@@ -55,6 +56,7 @@ const NAV_GROUPS = [
       { to: '/admin/planos', label: 'Planos', icon: CreditCard },
       { to: '/admin/matriculas', label: 'Matrículas', icon: ClipboardList },
       { to: '/admin/turmas', label: 'Turmas', icon: GraduationCap },
+      { to: '/admin/ambientes', label: 'Ambientes', icon: MapPin },
       { to: '/admin/treinos', label: 'Treinos', icon: Dumbbell },
       { to: '/admin/checkin', label: 'Check-in', icon: CalendarCheck },
     ],
