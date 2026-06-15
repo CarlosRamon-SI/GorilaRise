@@ -628,6 +628,11 @@ export default function PainelAtleta() {
             )}
 
             {tab === 'ficha'          && <FichaTreinoTab />}
+            {(['anamnese','checkin','recordes','prontuario','foto-inicial','foto-progresso'] as const).includes(tab as any) && !matriculaAtiva && (
+              <div className="mx-4 mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-yellow-600 text-sm">
+                Esta funcionalidade requer uma matrícula ativa. Fale com a administração do clube.
+              </div>
+            )}
             {tab === 'anamnese'       && <TabAnamnese />}
             {tab === 'checkin'        && <TabCheckin />}
             {tab === 'recordes'       && <TabRecordes />}

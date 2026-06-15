@@ -249,7 +249,7 @@ function ModalAtletas({ turma, onClose }: { turma: Turma; onClose: () => void })
   useEffect(() => {
     Promise.all([
       api.get<AtletaItem[]>(`/admin/turmas/${turma.id}/atletas`),
-      api.get<AtletaItem[]>('/admin/usuarios?role=ATLETA&ativo=true').catch(() => [] as AtletaItem[]),
+      api.get<AtletaItem[]>('/admin/usuarios?role=ATLETA&ativo=true&comMatriculaAtiva=true').catch(() => [] as AtletaItem[]),
     ]).then(([ins, disp]) => {
       setInscritos(ins)
       setDisponiveis(disp)
