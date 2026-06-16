@@ -4,9 +4,8 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Leaf, Users, Zap, ArrowRight } from 'lucide-react';
+import { FileText, Leaf, Users, Zap, ArrowRight, Heart, Music, BookOpen, Star, Globe } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Heart, Users, Music, BookOpen, Leaf, Star, Zap, Globe } from 'lucide-react';
 
 interface Modalidade {
   id: number;

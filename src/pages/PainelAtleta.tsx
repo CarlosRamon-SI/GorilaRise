@@ -194,7 +194,7 @@ export default function PainelAtleta() {
   const todayStr = new Date().toISOString().slice(0, 10)
   const { data: wods = [] } = useQuery<WOD[]>({
     queryKey: ['wod-hoje'],
-    queryFn: () => api.get('/wod'),
+    queryFn: () => api.get('/treinos/wod'),
     enabled: !!user,
     retry: false,
   })
