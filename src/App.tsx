@@ -51,6 +51,7 @@ import AdminEventos from "./pages/admin/AdminEventos"
 import ProjetoPage from "./pages/projetos/ProjetoPage";
 import Termos from "./pages/Termos";
 import Privacidade from "./pages/Privacidade";
+import { InstallPWA } from "./components/InstallPWA";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <InstallPWA />
       <BrowserRouter>
         <ScrollToTop />
         <Routes>
