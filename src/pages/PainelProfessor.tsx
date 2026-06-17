@@ -395,13 +395,14 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
 }
 
 // ── Tab: Check-in / Turmas ─────────────────────────────────────────────────
+interface CheckinItem { id: number; atletaNome: string; atletaEmail: string }
 interface TurmaCheckin {
   id: number
   codigo: string
   horario: string
   descricao: string
   capacidade: number
-  checkins: { id: number; atletaNome: string; atletaEmail: string }[]
+  checkins: CheckinItem[]
 }
 
 // ── Tab: Minhas Turmas (professor) ─────────────────────────────────────────
@@ -621,8 +622,14 @@ function TabTurmasProfessor() {
   )
 }
 
-function TabCheckin() {
+function TabCheckin({ atletas }: { atletas: Atleta[] }) {
+  const queryClient = useQueryClient()
   const [data, setData] = useState(todayStr())
+  const [addingTo, setAddingTo] = useState<number | null>(null)
+  const [addAtletaId, setAddAtletaId] = useState('')
+  const [addLoading, setAddLoading] = useState(false)
+  const [removingId, setRemovingId] = useState<number | null>(null)
+
   const { data: turmas = [], isLoading, refetch } = useQuery<TurmaCheckin[]>({
     queryKey: ['checkin-turmas', data],
     queryFn: () => api.get(`/admin/checkin?data=${data}`),
@@ -630,6 +637,47 @@ function TabCheckin() {
   })
 
   const totalPresentes = turmas.reduce((s, t) => s + t.checkins.length, 0)
+
+  // G-C7: add check-in manually
+  async function handleAddCheckin(turmaId: number) {
+    if (!addAtletaId) return
+    setAddLoading(true)
+    try {
+      const novo = await api.post<CheckinItem>('/admin/checkin', {
+        turmaId,
+        atletaId: Number(addAtletaId),
+      })
+      queryClient.setQueryData<TurmaCheckin[]>(['checkin-turmas', data], prev =>
+        prev?.map(t => t.id === turmaId ? { ...t, checkins: [...t.checkins, novo] } : t)
+      )
+      setAddingTo(null)
+      setAddAtletaId('')
+      toast.success('Check-in registrado.')
+    } catch (e: any) {
+      toast.error(e.message ?? 'Erro ao registrar check-in.')
+    } finally {
+      setAddLoading(false)
+    }
+  }
+
+  // G-C7: remove check-in
+  async function handleRemoveCheckin(checkinId: number, turmaId: number) {
+    setRemovingId(checkinId)
+    try {
+      await api.delete(`/admin/checkin/${checkinId}`)
+      queryClient.setQueryData<TurmaCheckin[]>(['checkin-turmas', data], prev =>
+        prev?.map(t => t.id === turmaId
+          ? { ...t, checkins: t.checkins.filter(c => c.id !== checkinId) }
+          : t
+        )
+      )
+      toast.success('Check-in removido.')
+    } catch (e: any) {
+      toast.error(e.message ?? 'Erro ao remover check-in.')
+    } finally {
+      setRemovingId(null)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -657,8 +705,7 @@ function TabCheckin() {
           </div>
           {!isLoading && (
             <p className="text-xs text-gray-400 mt-1">
-              {totalPresentes} presença{totalPresentes !== 1 ? 's' : ''} confirmada{totalPresentes !== 1 ? 's' : ''} em {turmas.length} turma{turmas.length !== 1 ? 's' : ''}
-              {' '}· atualiza automaticamente a cada 60s
+              {totalPresentes} presença{totalPresentes !== 1 ? 's' : ''} · {turmas.length} turma{turmas.length !== 1 ? 's' : ''} · atualiza a cada 60s
             </p>
           )}
         </CardHeader>
@@ -673,7 +720,7 @@ function TabCheckin() {
         <Card>
           <CardContent className="py-10 text-center text-gray-400 text-sm">
             <CheckCircle size={28} className="mx-auto mb-2 opacity-30" />
-            Nenhuma turma ativa encontrada.
+            Nenhuma turma sua encontrada para este dia.
           </CardContent>
         </Card>
       ) : (
@@ -682,6 +729,11 @@ function TabCheckin() {
           const vagas = t.capacidade - n
           const pct = Math.round((n / t.capacidade) * 100)
           const cheia = vagas === 0
+          // atletas que ainda não estão na lista de check-in desta turma
+          const atletasDisponiveis = atletas.filter(a =>
+            !t.checkins.some(c => c.atletaEmail === a.email)
+          )
+
           return (
             <Card key={t.id} className={cheia ? 'border-orange-200' : ''}>
               <CardContent className="pt-4 pb-4">
@@ -714,27 +766,70 @@ function TabCheckin() {
                   />
                 </div>
 
-                {/* Lista de atletas + vagas */}
+                {/* Lista de atletas */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {t.checkins.map(c => (
                     <div key={c.id} className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-lg px-2.5 py-1.5">
                       <div className="w-6 h-6 rounded-full bg-gorila-yellow/30 flex items-center justify-center text-gorila-primary text-[10px] font-bold shrink-0">
                         {iniciais(c.atletaNome)}
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium text-gorila-primary truncate">{c.atletaNome}</p>
                         <p className="text-[10px] text-gray-400 truncate">{c.atletaEmail}</p>
                       </div>
-                      <CheckCircle size={12} className="text-green-500 shrink-0 ml-auto" />
+                      {/* G-C7: botão remover check-in */}
+                      <button
+                        disabled={removingId === c.id}
+                        onClick={() => handleRemoveCheckin(c.id, t.id)}
+                        title="Remover check-in"
+                        className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40 ml-1 shrink-0">
+                        {removingId === c.id
+                          ? <Loader2 size={11} className="animate-spin" />
+                          : <XCircle size={13} />}
+                      </button>
                     </div>
                   ))}
-                  {Array.from({ length: vagas }).map((_, i) => (
+                  {Array.from({ length: Math.max(0, vagas) }).map((_, i) => (
                     <div key={`vaga-${i}`} className="flex items-center gap-2 border border-dashed border-gray-200 rounded-lg px-2.5 py-1.5">
                       <div className="w-6 h-6 rounded-full bg-gray-100 shrink-0" />
                       <p className="text-[10px] text-gray-400">Aguardando check-in</p>
                     </div>
                   ))}
                 </div>
+
+                {/* G-C7: adicionar check-in manual */}
+                {addingTo === t.id ? (
+                  <div className="mt-3 flex items-center gap-2">
+                    <select
+                      value={addAtletaId}
+                      onChange={e => setAddAtletaId(e.target.value)}
+                      className="flex-1 text-xs bg-white border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:border-gorila-primary"
+                    >
+                      <option value="">Selecione o atleta…</option>
+                      {atletasDisponiveis.map(a => (
+                        <option key={a.id} value={a.id}>{a.nome}</option>
+                      ))}
+                    </select>
+                    <button
+                      disabled={!addAtletaId || addLoading}
+                      onClick={() => handleAddCheckin(t.id)}
+                      className="text-xs bg-gorila-primary text-white px-3 py-1.5 rounded hover:bg-gorila-dark transition-colors disabled:opacity-50 flex items-center gap-1">
+                      {addLoading ? <Loader2 size={11} className="animate-spin" /> : null}
+                      OK
+                    </button>
+                    <button
+                      onClick={() => { setAddingTo(null); setAddAtletaId('') }}
+                      className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5">
+                      Cancelar
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setAddingTo(t.id); setAddAtletaId('') }}
+                    className="mt-3 text-[11px] text-gorila-primary hover:underline flex items-center gap-1">
+                    <Plus size={12} /> Registrar check-in manual
+                  </button>
+                )}
               </CardContent>
             </Card>
           )
@@ -1399,7 +1494,7 @@ export default function PainelProfessor() {
             )}
 
             {tab === 'prescricao'    && <TabPrescricao atletas={atletas} />}
-            {tab === 'checkin'       && <TabCheckin />}
+            {tab === 'checkin'       && <TabCheckin atletas={atletas} />}
             {tab === 'minhas-turmas' && <TabTurmasProfessor />}
             {tab === 'anamneses'  && <TabAnamneses />}
             {tab === 'desempenho' && <TabDesempenho atletas={atletas} />}

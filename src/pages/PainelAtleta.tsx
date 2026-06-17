@@ -37,6 +37,7 @@ interface Perfil {
 
 interface TurmaResumida {
   id: number; horario: string; modalidade: string; checkedIn: boolean
+  vagas: number; capacidade: number
 }
 
 interface RecordeResumido {
