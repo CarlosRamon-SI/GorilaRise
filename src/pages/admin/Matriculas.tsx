@@ -79,36 +79,36 @@ function ModalNovaMatricula({
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs text-zinc-400 mb-1 block">Atleta</label>
-            <select value={form.usuarioId} onChange={e => setForm(f => ({ ...f, usuarioId: e.target.value }))} className={sel} required autoFocus>
+            <label className="text-xs text-zinc-400 mb-1 block" htmlFor="mat-atleta">Atleta</label>
+            <select id="mat-atleta" name="usuarioId" value={form.usuarioId} onChange={e => setForm(f => ({ ...f, usuarioId: e.target.value }))} className={sel} required autoFocus>
               <option value="">Selecione o atleta…</option>
               {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs text-zinc-400 mb-1 block">Modalidade</label>
-            <select value={form.modalidadeId} onChange={e => setForm(f => ({ ...f, modalidadeId: e.target.value }))} className={sel} required>
+            <label className="text-xs text-zinc-400 mb-1 block" htmlFor="mat-modalidade">Modalidade</label>
+            <select id="mat-modalidade" name="modalidadeId" value={form.modalidadeId} onChange={e => setForm(f => ({ ...f, modalidadeId: e.target.value }))} className={sel} required>
               <option value="">Selecione a modalidade…</option>
               {modalidades.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs text-zinc-400 mb-1 block">Plano</label>
-            <select value={form.planoId} onChange={e => setForm(f => ({ ...f, planoId: e.target.value }))} className={sel} required>
+            <label className="text-xs text-zinc-400 mb-1 block" htmlFor="mat-plano">Plano</label>
+            <select id="mat-plano" name="planoId" value={form.planoId} onChange={e => setForm(f => ({ ...f, planoId: e.target.value }))} className={sel} required>
               <option value="">Selecione o plano…</option>
               {planos.map(p => <option key={p.id} value={p.id}>{p.nome} — R$ {Number(p.valor).toFixed(2)}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs text-zinc-400 mb-1 block">Treinador Responsável (opcional)</label>
-            <select value={form.responsavelId} onChange={e => setForm(f => ({ ...f, responsavelId: e.target.value }))} className={sel}>
+            <label className="text-xs text-zinc-400 mb-1 block" htmlFor="mat-treinador">Treinador Responsável (opcional)</label>
+            <select id="mat-treinador" name="responsavelId" value={form.responsavelId} onChange={e => setForm(f => ({ ...f, responsavelId: e.target.value }))} className={sel}>
               <option value="">Sem responsável definido</option>
               {treinadores.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs text-zinc-400 mb-1 block">Status inicial</label>
-            <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={sel}>
+            <label className="text-xs text-zinc-400 mb-1 block" htmlFor="mat-status">Status inicial</label>
+            <select id="mat-status" name="status" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={sel}>
               <option value="ATIVA">ATIVA</option>
               <option value="PENDENTE">PENDENTE</option>
             </select>

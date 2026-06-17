@@ -165,6 +165,8 @@ export default function PainelAtleta() {
 
   const queryClient = useQueryClient()
   const fotoPerfilRef = useRef<HTMLInputElement>(null)
+  const [showCheckinDrop, setShowCheckinDrop] = useState(false)
+  const [checkinInProgress, setCheckinInProgress] = useState<number | null>(null)
 
   const { data: perfil, isLoading } = useQuery<Perfil>({
     queryKey: ['perfil-me'],
@@ -222,6 +224,20 @@ export default function PainelAtleta() {
       toast.success('Foto atualizada!')
     } catch {
       toast.error('Erro ao enviar foto.')
+    }
+  }
+
+  async function quickCheckin(turmaId: number) {
+    setCheckinInProgress(turmaId)
+    try {
+      await api.post('/checkin', { turmaId })
+      queryClient.invalidateQueries({ queryKey: ['turmas-dashboard'] })
+      setShowCheckinDrop(false)
+      toast.success('Check-in realizado!')
+    } catch (err: any) {
+      toast.error(err.message ?? 'Erro ao fazer check-in.')
+    } finally {
+      setCheckinInProgress(null)
     }
   }
 
@@ -356,12 +372,35 @@ export default function PainelAtleta() {
                         <p className="text-[11px] text-white/40 mt-1">Nenhuma turma confirmada hoje</p>
                       </>
                     )}
-                    <button
-                      onClick={() => setTab('checkin')}
-                      className="mt-3 w-full text-[11px] font-bold py-1.5 rounded-lg border border-white/10 text-white/70 hover:text-white hover:border-white/20 transition-colors duration-150"
-                    >
-                      {checkinHoje.length > 0 ? 'Alterar Horário' : 'Fazer Check-in'}
-                    </button>
+                    {showCheckinDrop && checkinHoje.length === 0 ? (
+                      <div className="mt-3 space-y-1.5">
+                        {turmasData.filter(t => !t.checkedIn).length === 0 ? (
+                          <p className="text-[10px] text-white/40 text-center py-1">Nenhuma turma disponível</p>
+                        ) : turmasData.filter(t => !t.checkedIn).map(t => (
+                          <button
+                            key={t.id}
+                            disabled={checkinInProgress === t.id}
+                            onClick={() => quickCheckin(t.id)}
+                            className="w-full text-left px-2.5 py-1.5 rounded-lg bg-gorila-yellow/10 hover:bg-gorila-yellow/20 border border-gorila-yellow/20 text-[10px] text-white/80 transition-colors disabled:opacity-50 font-medium"
+                          >
+                            {checkinInProgress === t.id ? '...' : `${t.modalidade} · ${t.horario}`}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => setShowCheckinDrop(false)}
+                          className="w-full text-[10px] text-white/30 hover:text-white/50 transition-colors pt-0.5"
+                        >
+                          cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => checkinHoje.length > 0 ? setTab('checkin') : setShowCheckinDrop(true)}
+                        className="mt-3 w-full text-[11px] font-bold py-1.5 rounded-lg border border-white/10 text-white/70 hover:text-white hover:border-white/20 transition-colors duration-150"
+                      >
+                        {checkinHoje.length > 0 ? 'Alterar Horário' : 'Fazer Check-in'}
+                      </button>
+                    )}
                   </div>
 
                   {/* Ficha de Treino */}

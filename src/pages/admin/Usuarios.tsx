@@ -415,6 +415,7 @@ export default function Usuarios() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState<number | null>(null)
+  const [search, setSearch] = useState('')
   const [senhaModal, setSenhaModal] = useState<Pick<Usuario, 'id' | 'nome'> | null>(null)
   const [novoModal, setNovoModal] = useState(false)
   const [editarModal, setEditarModal] = useState<Usuario | null>(null)
@@ -456,6 +457,14 @@ export default function Usuarios() {
     return u.role === 'ATLETA' ? 'Atleta' : u.role === 'ADMIN' ? 'Admin' : 'Treinador'
   }
 
+  const filteredUsuarios = search.trim()
+    ? usuarios.filter(u =>
+        u.nome.toLowerCase().includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase()) ||
+        u.cidade.toLowerCase().includes(search.toLowerCase())
+      )
+    : usuarios
+
   return (
     <div className="px-4 py-5 md:p-8">
       {senhaModal && <ModalSenha usuario={senhaModal} onClose={() => setSenhaModal(null)} />}
@@ -485,7 +494,23 @@ export default function Usuarios() {
           </button>
         )}
       </div>
-      <p className="text-zinc-400 text-sm mb-8">{usuarios.length} cadastrado(s)</p>
+      <div className="flex items-center gap-3 mb-6">
+        <p className="text-zinc-400 text-sm shrink-0">
+          {search ? `${filteredUsuarios.length} de ${usuarios.length}` : `${usuarios.length}`} cadastrado(s)
+        </p>
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar por nome, e-mail ou cidade…"
+          className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-gorila-yellow"
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="text-zinc-500 hover:text-white text-xs shrink-0">
+            Limpar
+          </button>
+        )}
+      </div>
 
       {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
 
@@ -510,7 +535,7 @@ export default function Usuarios() {
               </tr>
             </thead>
             <tbody>
-              {usuarios.map((u) => (
+              {filteredUsuarios.map((u) => (
                 <tr key={u.id} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
                   <td className="px-4 py-3 font-medium">{u.nome}</td>
                   <td className="px-4 py-3 text-zinc-400">{u.email}</td>

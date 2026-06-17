@@ -14,7 +14,7 @@ import DietPrescription from '@/components/DietPrescription'
 import {
   LayoutDashboard, Users, Dumbbell, CheckCircle, FileText,
   LogOut, ChevronRight, Target, BarChart3, Shield, Plus, Trash2,
-  Calendar, Trophy, AlertCircle, Salad, Pencil, Camera, GraduationCap, XCircle,
+  Calendar, Trophy, AlertCircle, Salad, Pencil, Camera, GraduationCap, XCircle, Loader2,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -988,6 +988,182 @@ function TabDesempenho({ atletas }: { atletas: Atleta[] }) {
   )
 }
 
+// ── TabEscalacao ───────────────────────────────────────────────────────────
+interface EscalacaoAtleta { atletaId: number; posicao: string | null; nome: string }
+interface Escalacao {
+  id: number; titulo: string; descricao?: string | null; data: string
+  atletas: EscalacaoAtleta[]
+}
+
+function TabEscalacao({ atletas }: { atletas: Atleta[] }) {
+  const queryClient = useQueryClient()
+  const [modalOpen, setModalOpen] = useState(false)
+  const [titulo, setTitulo] = useState('')
+  const [data, setData] = useState('')
+  const [descricao, setDescricao] = useState('')
+  const [selecionados, setSelecionados] = useState<{ atletaId: number; posicao: string }[]>([])
+  const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+
+  const { data: escalacoes = [], isLoading } = useQuery<Escalacao[]>({
+    queryKey: ['escalacoes'],
+    queryFn: () => api.get('/escalacoes'),
+  })
+
+  function toggleAtleta(id: number) {
+    setSelecionados(prev =>
+      prev.some(a => a.atletaId === id)
+        ? prev.filter(a => a.atletaId !== id)
+        : [...prev, { atletaId: id, posicao: '' }]
+    )
+  }
+
+  function setPosicao(atletaId: number, posicao: string) {
+    setSelecionados(prev => prev.map(a => a.atletaId === atletaId ? { ...a, posicao } : a))
+  }
+
+  function resetModal() {
+    setTitulo(''); setData(''); setDescricao(''); setSelecionados([])
+  }
+
+  async function handleSalvar() {
+    if (!titulo.trim() || !data) return toast.error('Título e data são obrigatórios.')
+    setSaving(true)
+    try {
+      await api.post('/escalacoes', {
+        titulo: titulo.trim(), data, descricao: descricao.trim() || undefined,
+        atletasIds: selecionados,
+      })
+      queryClient.invalidateQueries({ queryKey: ['escalacoes'] })
+      toast.success('Escalação criada!')
+      setModalOpen(false)
+      resetModal()
+    } catch (e: any) {
+      toast.error(e.message ?? 'Erro ao criar escalação.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDeletar(id: number) {
+    setDeletingId(id)
+    try {
+      await api.delete(`/escalacoes/${id}`)
+      queryClient.invalidateQueries({ queryKey: ['escalacoes'] })
+      toast.success('Escalação removida.')
+    } catch (e: any) {
+      toast.error(e.message ?? 'Erro ao remover.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold flex items-center gap-2"><Target size={18} className="text-gorila-yellow" /> Escalação de Times</h2>
+        <Button size="sm" onClick={() => setModalOpen(true)} className="bg-gorila-yellow text-gorila-primary hover:bg-yellow-300 font-bold">
+          <Plus size={14} className="mr-1" /> Nova Escalação
+        </Button>
+      </div>
+
+      {isLoading && (
+        <div className="flex justify-center py-12"><Loader2 size={28} className="animate-spin text-gorila-yellow" /></div>
+      )}
+
+      {!isLoading && escalacoes.length === 0 && (
+        <Card><CardContent className="py-14 text-center text-zinc-400 text-sm">Nenhuma escalação criada ainda.</CardContent></Card>
+      )}
+
+      <div className="space-y-3">
+        {escalacoes.map(e => (
+          <Card key={e.id} className="border-zinc-800">
+            <CardContent className="py-4 px-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-white truncate">{e.titulo}</p>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    {new Date(e.data).toLocaleDateString('pt-BR')}
+                    {e.descricao && <span className="ml-2 text-zinc-500">— {e.descricao}</span>}
+                  </p>
+                  {e.atletas.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {e.atletas.map(a => (
+                        <span key={a.atletaId} className="text-xs bg-zinc-800 border border-zinc-700 rounded-full px-2 py-0.5 text-zinc-300">
+                          {a.nome}{a.posicao ? ` · ${a.posicao}` : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button
+                  disabled={deletingId === e.id}
+                  onClick={() => handleDeletar(e.id)}
+                  className="text-zinc-500 hover:text-red-400 transition-colors disabled:opacity-40 mt-0.5 shrink-0">
+                  {deletingId === e.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Dialog open={modalOpen} onOpenChange={open => { setModalOpen(open); if (!open) resetModal() }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Nova Escalação</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Título *</label>
+              <Input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: Equipe WOD Sábado" />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Data *</label>
+              <Input type="date" value={data} onChange={e => setData(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400 mb-1 block">Descrição (opcional)</label>
+              <Textarea value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Observações…" rows={2} />
+            </div>
+            <div>
+              <label className="text-xs text-zinc-400 mb-2 block">Atletas</label>
+              {atletas.length === 0 && <p className="text-xs text-zinc-500">Nenhum atleta vinculado.</p>}
+              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                {atletas.map(a => {
+                  const sel = selecionados.find(s => s.atletaId === a.id)
+                  return (
+                    <div key={a.id} className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleAtleta(a.id)}
+                        className={`flex-1 text-left text-sm px-3 py-1.5 rounded-lg border transition-colors ${sel ? 'border-gorila-yellow bg-gorila-yellow/10 text-white' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>
+                        {a.nome}
+                      </button>
+                      {sel && (
+                        <Input
+                          value={sel.posicao}
+                          onChange={e => setPosicao(a.id, e.target.value)}
+                          placeholder="Posição"
+                          className="w-28 text-xs h-8"
+                        />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => { setModalOpen(false); resetModal() }}>Cancelar</Button>
+              <Button disabled={saving} onClick={handleSalvar} className="flex-1 bg-gorila-yellow text-gorila-primary hover:bg-yellow-300 font-bold">
+                {saving ? <Loader2 size={14} className="animate-spin mr-1" /> : <Plus size={14} className="mr-1" />} Salvar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 export default function PainelProfessor() {
   const { user, logout } = useAuth()
@@ -1174,7 +1350,7 @@ export default function PainelProfessor() {
                             <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
                               a.matriculas?.some(m => m.status === 'ATIVA') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                             }`}>
-                              {a.matriculas?.some(m => m.status === 'ATIVA') ? 'ATIVA' : 'INATIVA'}
+                              {a.matriculas?.some(m => m.status === 'ATIVA') ? 'Matriculado' : 'Pendente'}
                             </span>
                           </div>
                         ))}
@@ -1212,7 +1388,7 @@ export default function PainelProfessor() {
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                             a.matriculas?.some(m => m.status === 'ATIVA') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                           }`}>
-                            {a.matriculas?.some(m => m.status === 'ATIVA') ? 'ATIVA' : 'INATIVA'}
+                            {a.matriculas?.some(m => m.status === 'ATIVA') ? 'Matriculado' : 'Pendente'}
                           </span>
                         </div>
                       ))}
@@ -1229,16 +1405,7 @@ export default function PainelProfessor() {
             {tab === 'desempenho' && <TabDesempenho atletas={atletas} />}
             {tab === 'dieta'      && <DietPrescription userName={user.nome} />}
 
-            {tab === 'escalacao' && (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                  <Target size={24} className="text-gorila-yellow mb-4" />
-                  <h3 className="font-bold text-gorila-primary text-lg mb-1">Escalação de Times</h3>
-                  <p className="text-gray-400 text-sm">Esta funcionalidade está em desenvolvimento.</p>
-                  <span className="mt-4 inline-block text-xs font-bold bg-gorila-yellow/20 text-gorila-primary px-3 py-1 rounded-full uppercase tracking-wide">Em breve</span>
-                </CardContent>
-              </Card>
-            )}
+            {tab === 'escalacao' && <TabEscalacao atletas={atletas} />}
           </div>
         </div>
       </div>
