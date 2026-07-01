@@ -49,16 +49,20 @@ function PatrocinadoresFooter() {
             <button onClick={() => setIdx(i => (i - 1 + pages) % pages)}
               className="shrink-0 text-white/30 hover:text-white transition-colors text-lg">‹</button>
           )}
-          <div className="flex flex-wrap justify-center items-center gap-5 flex-1">
+          <div className="flex flex-wrap justify-center items-center gap-4 flex-1">
             {slice.map(p => {
-              const inner = p.logoUrl
-                ? <img src={p.logoUrl} alt={p.nome} className="h-8 w-auto max-w-[100px] object-contain brightness-0 invert"
-                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
-                : <span className="text-xs font-semibold text-white">{p.nome}</span>
+              const inner = (
+                <div className="h-10 px-3 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                  {p.logoUrl
+                    ? <img src={p.logoUrl} alt={p.nome} className="h-7 w-auto max-w-[90px] object-contain"
+                        onError={e => { (e.currentTarget as HTMLImageElement).replaceWith(Object.assign(document.createElement('span'), { className: 'text-xs font-semibold text-white', textContent: p.nome })) }} />
+                    : <span className="text-xs font-semibold text-white">{p.nome}</span>}
+                </div>
+              )
               return p.link
                 ? <a key={p.id} href={p.link} target="_blank" rel="noreferrer" title={p.nome}
-                    className="opacity-60 hover:opacity-100 transition-opacity">{inner}</a>
-                : <div key={p.id} className="opacity-60" title={p.nome}>{inner}</div>
+                    className="opacity-70 hover:opacity-100 transition-opacity">{inner}</a>
+                : <div key={p.id} className="opacity-70" title={p.nome}>{inner}</div>
             })}
           </div>
           {showControls && (
