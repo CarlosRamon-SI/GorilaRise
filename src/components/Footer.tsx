@@ -52,11 +52,11 @@ function PatrocinadoresFooter() {
           <div className="flex flex-wrap justify-center items-center gap-4 flex-1">
             {slice.map(p => {
               const inner = (
-                <div className="h-10 px-3 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                <div className="h-14 px-4 flex items-center justify-center rounded-lg bg-white/90 hover:bg-white transition-colors min-w-[80px] max-w-[140px]">
                   {p.logoUrl
-                    ? <img src={p.logoUrl} alt={p.nome} className="h-7 w-auto max-w-[90px] object-contain"
-                        onError={e => { (e.currentTarget as HTMLImageElement).replaceWith(Object.assign(document.createElement('span'), { className: 'text-xs font-semibold text-white', textContent: p.nome })) }} />
-                    : <span className="text-xs font-semibold text-white">{p.nome}</span>}
+                    ? <img src={p.logoUrl} alt={p.nome} className="h-9 w-auto max-w-[120px] object-contain"
+                        onError={e => { (e.currentTarget as HTMLImageElement).replaceWith(Object.assign(document.createElement('span'), { className: 'text-[11px] font-semibold text-gorila-primary text-center leading-tight', textContent: p.nome })) }} />
+                    : <span className="text-[11px] font-semibold text-gorila-primary text-center leading-tight">{p.nome}</span>}
                 </div>
               )
               return p.link

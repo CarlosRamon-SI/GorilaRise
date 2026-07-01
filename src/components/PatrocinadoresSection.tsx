@@ -56,14 +56,14 @@ function CatCarousel({ cat, items }: { cat: string; items: Patrocinador[] }) {
         )}
         <div className="flex flex-wrap justify-center gap-5 flex-1">
           {slice.map(p => (
-            <div key={p.id} className="flex flex-col items-center gap-2 w-36 group">
-              <div className="w-24 h-16 flex items-center justify-center rounded-xl border border-gray-100 bg-gray-50 p-2 group-hover:border-gorila-primary/20 transition-colors">
+            <div key={p.id} className="flex flex-col items-center gap-2 w-40 group">
+              <div className="w-36 h-20 flex items-center justify-center rounded-xl border border-gray-100 bg-gray-50 p-3 group-hover:border-gorila-primary/20 transition-colors">
                 {p.logoUrl ? (
                   <img src={p.logoUrl} alt={p.nome}
                     className="max-w-full max-h-full object-contain"
                     onError={e => (e.currentTarget.style.display = 'none')} />
                 ) : (
-                  <span className="text-[10px] font-bold text-gorila-primary/40 text-center leading-tight">{p.nome}</span>
+                  <span className="text-xs font-bold text-gorila-primary/40 text-center leading-tight">{p.nome}</span>
                 )}
               </div>
               <p className="text-xs font-semibold text-gorila-primary text-center leading-tight">{p.nome}</p>

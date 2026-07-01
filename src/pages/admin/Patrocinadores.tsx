@@ -123,18 +123,41 @@ export default function Patrocinadores() {
                 placeholder="https://..."
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400" />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-xs text-zinc-400 mb-1">Logo</label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mb-2">
                 <input value={form.logoUrl} onChange={e => setForm(p => ({ ...p, logoUrl: e.target.value }))}
                   placeholder="URL ou upload"
                   className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400" />
                 <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
-                  className="bg-zinc-700 hover:bg-zinc-600 px-3 py-2 rounded-lg text-zinc-300">
-                  <Upload size={15} />
+                  className="bg-zinc-700 hover:bg-zinc-600 px-3 py-2 rounded-lg text-zinc-300 disabled:opacity-50 shrink-0">
+                  {uploading ? '...' : <Upload size={15} />}
                 </button>
-                <input ref={fileRef} type="file" className="hidden" accept="image/*"
+                <input ref={fileRef} type="file" className="hidden" accept="image/png,image/jpeg,image/webp,image/svg+xml"
                   onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f) }} />
+              </div>
+              {/* Preview */}
+              {form.logoUrl && (
+                <div className="mb-2 p-3 bg-zinc-800 rounded-lg border border-zinc-700 flex items-center gap-4">
+                  <div className="bg-white rounded p-2 flex items-center justify-center w-28 h-14 shrink-0">
+                    <img src={form.logoUrl} alt="preview claro" className="max-w-full max-h-full object-contain"
+                      onError={e => (e.currentTarget.style.display = 'none')} />
+                  </div>
+                  <div className="bg-gorila-primary rounded p-2 flex items-center justify-center w-28 h-14 shrink-0">
+                    <img src={form.logoUrl} alt="preview escuro" className="max-w-full max-h-full object-contain"
+                      onError={e => (e.currentTarget.style.display = 'none')} />
+                  </div>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed">Pré-visualização em fundo claro (home) e escuro (rodapé)</p>
+                </div>
+              )}
+              {/* Dicas */}
+              <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-3 text-[11px] text-zinc-400 space-y-1">
+                <p className="font-semibold text-zinc-300 mb-1.5">Orientações para a logo:</p>
+                <p>• <span className="text-white">Formato ideal:</span> PNG com fundo transparente ou SVG — garante boa aparência em qualquer cor de fundo</p>
+                <p>• <span className="text-white">Dimensões recomendadas:</span> horizontal, mínimo 300 × 150 px — logos muito quadradas ou verticais ficam pequenas na exibição</p>
+                <p>• <span className="text-white">Tamanho máximo:</span> 5 MB por arquivo</p>
+                <p>• <span className="text-white">Fundo branco:</span> evite — em fundos escuros (rodapé) fica com um retângulo branco visível; prefira fundo transparente</p>
+                <p>• <span className="text-white">Cores:</span> a logo é exibida com as cores originais; verifique a pré-visualização acima antes de salvar</p>
               </div>
             </div>
           </div>
