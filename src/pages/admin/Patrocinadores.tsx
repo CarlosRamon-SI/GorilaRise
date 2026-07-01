@@ -161,12 +161,6 @@ export default function Patrocinadores() {
               </div>
             </div>
           </div>
-          <div>
-            <label className="block text-xs text-zinc-400 mb-1">Descrição / Benefício</label>
-            <textarea value={form.descricao} onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))}
-              rows={2} placeholder="ex: 10% de desconto em produtos selecionados"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none" />
-          </div>
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={saving}
               className="flex items-center gap-2 bg-yellow-400 text-zinc-900 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-300 disabled:opacity-50">
@@ -198,7 +192,6 @@ export default function Patrocinadores() {
                   <p className="font-semibold truncate">{p.nome}</p>
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${CAT_COLORS[p.categoria]}`}>{CATS[p.categoria]}</span>
                 </div>
-                {p.descricao && <p className="text-xs text-zinc-400 mt-0.5 truncate">{p.descricao}</p>}
                 <div className="flex items-center gap-3 mt-1.5">
                   <button onClick={() => toggleAtivo(p)}
                     className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${p.ativo ? 'bg-green-500/20 text-green-400' : 'bg-zinc-800 text-zinc-500'}`}>
