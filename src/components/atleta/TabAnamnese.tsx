@@ -14,6 +14,7 @@ interface AnamneseData {
   contatoEmergenciaNome: string
   contatoEmergenciaTelefone: string
   objetivos: string[]
+  objetivoDescricao: string
   doencas: string
   medicamentos: string
   cirurgias: string
@@ -39,7 +40,7 @@ const OBJETIVOS_OPTS = [
 const blank = (): AnamneseData => ({
   nomeCompleto: '', dataNascimento: '', sexo: '', telefone: '',
   profissao: '', contatoEmergenciaNome: '', contatoEmergenciaTelefone: '',
-  objetivos: [], doencas: '', medicamentos: '', cirurgias: '',
+  objetivos: [], objetivoDescricao: '', doencas: '', medicamentos: '', cirurgias: '',
   problemasArticulares: '', historicoCv: false, tabagismo: false,
   frequenciaBanheiro: '', historicoAtividades: '', frequenciaSemanal: '',
   qualidadeSono: '', consumoAlcool: '', termoacceito: false,
@@ -157,11 +158,17 @@ export default function TabAnamnese() {
           </section>
           <section>
             <h3 className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3">Objetivos</h3>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-3">
               {(saved.objetivos || []).map(o => (
                 <span key={o} className="bg-gorila-yellow/20 text-gorila-primary text-xs font-medium px-3 py-1 rounded-full">{o}</span>
               ))}
             </div>
+            {saved.objetivoDescricao && (
+              <div>
+                <p className="text-xs text-gray-400">Qual o seu objetivo?</p>
+                <p className="text-sm font-medium whitespace-pre-line">{saved.objetivoDescricao}</p>
+              </div>
+            )}
           </section>
           <section>
             <h3 className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3">Histórico Clínico</h3>
@@ -237,6 +244,16 @@ export default function TabAnamnese() {
                     <span className="text-sm">{o}</span>
                   </label>
                 ))}
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Qual o seu objetivo?</label>
+                <textarea
+                  value={form.objetivoDescricao}
+                  onChange={e => set('objetivoDescricao', e.target.value)}
+                  placeholder="Descreva com suas palavras o que espera alcançar..."
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gorila-primary resize-none"
+                />
               </div>
             </div>
           )}
