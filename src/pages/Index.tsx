@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import PatrocinadoresSection from '@/components/PatrocinadoresSection';
 import GorilaRiseLogo from '@/components/GorilaRiseLogo';
 import TestModal from '@/components/TestModal';
 import { api } from '@/lib/api';
@@ -358,6 +359,7 @@ const Index = () => {
         </div>
       </section>
 
+      <PatrocinadoresSection />
       <Footer />
     </div>
   );

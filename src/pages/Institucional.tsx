@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import PatrocinadoresSection from '@/components/PatrocinadoresSection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Leaf, Users, Zap, ArrowRight, Heart, Music, BookOpen, Star, Globe } from 'lucide-react';
@@ -240,6 +241,7 @@ const Institucional = () => {
 
       </div>
 
+      <PatrocinadoresSection />
       <Footer />
     </div>
   );

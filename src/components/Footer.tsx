@@ -1,5 +1,83 @@
 import { MapPin, Phone, Mail, Clock, Facebook, Youtube, Instagram, Music } from 'lucide-react'
 import { useConfiguracoes } from '@/hooks/useConfiguracoes'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
+import { api } from '@/lib/api'
+
+interface Patrocinador {
+  id: number; nome: string; logoUrl?: string | null; link?: string | null; categoria: string
+}
+
+const CAT_ORDER: Record<string, number> = { PLATINA: 0, OURO: 1, PRATA: 2, BRONZE: 3 }
+
+function PatrocinadoresFooter() {
+  const { data = [] } = useQuery<Patrocinador[]>({
+    queryKey: ['patrocinadores-publico'],
+    queryFn:  () => api.get('/patrocinadores?ativo=true'),
+    staleTime: 10 * 60_000,
+    retry: 1,
+  })
+  const [idx, setIdx] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [perPage, setPerPage] = useState(6)
+
+  useEffect(() => {
+    function calc() {
+      if (!containerRef.current) return
+      const w = containerRef.current.offsetWidth
+      setPerPage(Math.max(2, Math.floor(w / 120)))
+    }
+    calc()
+    const ro = new ResizeObserver(calc)
+    if (containerRef.current) ro.observe(containerRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  if (data.length === 0) return null
+
+  const ordenados = [...data].sort((a, b) => (CAT_ORDER[a.categoria] ?? 9) - (CAT_ORDER[b.categoria] ?? 9))
+  const pages = Math.ceil(ordenados.length / perPage)
+  const slice = ordenados.slice(idx * perPage, idx * perPage + perPage)
+  const showControls = pages > 1
+
+  return (
+    <div className="border-t border-white/10 pt-8 mb-8">
+      <p className="text-xs font-bold uppercase tracking-widest text-gorila-yellow/60 text-center mb-4">Patrocinadores</p>
+      <div ref={containerRef} className="relative">
+        <div className="flex justify-center items-center gap-5 min-h-[40px]">
+          {showControls && (
+            <button onClick={() => setIdx(i => (i - 1 + pages) % pages)}
+              className="shrink-0 text-white/30 hover:text-white transition-colors text-lg">‹</button>
+          )}
+          <div className="flex flex-wrap justify-center items-center gap-5 flex-1">
+            {slice.map(p => {
+              const inner = p.logoUrl
+                ? <img src={p.logoUrl} alt={p.nome} className="h-8 w-auto max-w-[100px] object-contain brightness-0 invert"
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                : <span className="text-xs font-semibold text-white">{p.nome}</span>
+              return p.link
+                ? <a key={p.id} href={p.link} target="_blank" rel="noreferrer" title={p.nome}
+                    className="opacity-60 hover:opacity-100 transition-opacity">{inner}</a>
+                : <div key={p.id} className="opacity-60" title={p.nome}>{inner}</div>
+            })}
+          </div>
+          {showControls && (
+            <button onClick={() => setIdx(i => (i + 1) % pages)}
+              className="shrink-0 text-white/30 hover:text-white transition-colors text-lg">›</button>
+          )}
+        </div>
+        {showControls && (
+          <div className="flex justify-center gap-1 mt-3">
+            {Array.from({ length: pages }).map((_, i) => (
+              <button key={i} onClick={() => setIdx(i)}
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? 'bg-gorila-yellow' : 'bg-white/20'}`} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 const DIAS_LABEL: Record<string, string> = {
   segunda: 'Segunda',
@@ -147,7 +225,9 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-gray-700 mt-8 pt-8 text-center">
+        <PatrocinadoresFooter />
+
+        <div className="border-t border-gray-700 pt-8 text-center">
           <p className="text-gray-400">
             © {new Date().getFullYear()} Esporte Clube Gorila Rise. Todos os direitos reservados.
           </p>
