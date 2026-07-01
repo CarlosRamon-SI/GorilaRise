@@ -18,6 +18,7 @@ import {
   DollarSign,
   Medal,
   Building2,
+  Gift,
   CalendarCheck,
   GraduationCap,
   ClipboardCheck,
@@ -74,6 +75,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/admin/premiacoes', label: 'Premiações', icon: Medal },
       { to: '/admin/patrocinadores', label: 'Patrocinadores', icon: Building2 },
+      { to: '/admin/clube-vantagens', label: 'Clube de Vantagens', icon: Gift },
       { to: '/admin/projetos', label: 'Proj. Sociais', icon: Heart },
       { to: '/admin/documentos', label: 'Documentos', icon: FileText },
     ],

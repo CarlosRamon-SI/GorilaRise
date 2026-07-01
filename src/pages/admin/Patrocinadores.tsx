@@ -5,9 +5,9 @@ import { Plus, Pencil, Trash2, X, Check, Upload, Building2, ExternalLink } from 
 interface Patrocinador {
   id: number
   nome: string
-  descricao: string
-  logoUrl?: string
-  link?: string
+  descricao?: string | null
+  logoUrl?: string | null
+  link?: string | null
   categoria: 'PLATINA' | 'OURO' | 'PRATA' | 'BRONZE'
   ativo: boolean
 }
@@ -20,8 +20,6 @@ const CAT_COLORS: Record<string, string> = {
   PRATA: 'bg-zinc-400/20 text-zinc-300',
   BRONZE: 'bg-orange-700/20 text-orange-400',
 }
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'https://pressticket.adtecnologia.com.br'
 
 export default function Patrocinadores() {
   const [items, setItems] = useState<Patrocinador[]>([])
@@ -43,7 +41,7 @@ export default function Patrocinadores() {
 
   function startEdit(p: Patrocinador) {
     setEditId(p.id)
-    setForm({ nome: p.nome, descricao: p.descricao, logoUrl: p.logoUrl ?? '', link: p.link ?? '', categoria: p.categoria })
+    setForm({ nome: p.nome, descricao: p.descricao ?? '', logoUrl: p.logoUrl ?? '', link: p.link ?? '', categoria: p.categoria })
     setShowForm(true); setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -165,7 +163,7 @@ export default function Patrocinadores() {
           {items.map(p => (
             <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-4">
               {p.logoUrl ? (
-                <img src={`${BASE_URL}${p.logoUrl}`} alt={p.nome} className="w-14 h-14 object-contain rounded-lg bg-white/5 p-1 shrink-0"
+                <img src={p.logoUrl} alt={p.nome} className="w-14 h-14 object-contain rounded-lg bg-white/5 p-1 shrink-0"
                   onError={e => (e.currentTarget.style.display = 'none')} />
               ) : (
                 <div className="w-14 h-14 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0">

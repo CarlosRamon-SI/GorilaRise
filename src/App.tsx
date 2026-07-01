@@ -42,6 +42,7 @@ import Notificacoes from "./pages/admin/Notificacoes"
 import Financeiro from "./pages/admin/Financeiro"
 import Premiacoes from "./pages/admin/Premiacoes"
 import Patrocinadores from "./pages/admin/Patrocinadores"
+import AdminClubeVantagens from "./pages/admin/ClubeVantagens"
 import CheckinAdmin from "./pages/admin/CheckinAdmin"
 import AdminAmbientes from "./pages/admin/AdminAmbientes"
 import Turmas from "./pages/admin/Turmas"
@@ -103,6 +104,7 @@ const App = () => (
             <Route path="notificacoes" element={<Notificacoes />} />
             <Route path="premiacoes" element={<Premiacoes />} />
             <Route path="patrocinadores" element={<Patrocinadores />} />
+            <Route path="clube-vantagens" element={<AdminClubeVantagens />} />
             <Route path="leads" element={<Leads />} />
             <Route path="eventos" element={<AdminEventos />} />
             <Route path="projetos" element={<AdminProjetos />} />

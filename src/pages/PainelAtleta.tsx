@@ -9,6 +9,7 @@ import TabCheckin from '@/components/atleta/TabCheckin'
 import TabRecordes from '@/components/atleta/TabRecordes'
 import TabProntuario from '@/components/atleta/TabProntuario'
 import TabFotos from '@/components/atleta/TabFotos'
+import TabVantagens from '@/components/atleta/TabVantagens'
 import { useAuth } from '@/contexts/AuthContext'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
@@ -17,7 +18,7 @@ import {
   LayoutDashboard, User, CreditCard, Dumbbell, Clock, FileText,
   CheckCircle, Trophy, Camera, LogOut, ChevronRight,
   CalendarDays, ShieldCheck, Mail, Layers, Target, Calendar,
-  Upload, Activity, Zap, Bell
+  Upload, Activity, Zap, Bell, Gift
 } from 'lucide-react'
 
 interface Perfil {
@@ -72,6 +73,7 @@ const MENU = [
   { id: 'prontuario',     label: 'Prontuário',         short: 'Prontu.',  icon: Activity },
   { id: 'foto-inicial',   label: 'Foto Inicial',       short: 'Foto Ini', icon: Camera },
   { id: 'foto-progresso', label: 'Foto 24 Semanas',    short: 'Foto 24s', icon: Camera },
+  { id: 'vantagens',      label: 'Clube de Vantagens', short: 'Vantagens', icon: Gift },
   { id: 'notificacoes',   label: 'Notificações',       short: 'Avisos',   icon: Bell },
   { id: 'cronometro',     label: 'Cronômetro',         short: 'Timer',    icon: Clock },
 ]
@@ -688,6 +690,7 @@ export default function PainelAtleta() {
             {tab === 'foto-inicial'   && !!matriculaAtiva && <TabFotos tipo="INICIAL" />}
             {tab === 'foto-progresso' && !!matriculaAtiva && <TabFotos tipo="PROGRESSO" />}
             {tab === 'cronometro'     && <TimerSystem />}
+            {tab === 'vantagens'      && <TabVantagens />}
 
             {tab === 'notificacoes' && (
               <div className="space-y-3 animate-fade-in">
