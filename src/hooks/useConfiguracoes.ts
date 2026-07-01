@@ -23,6 +23,7 @@ export interface Configuracoes {
   facebook: string
   youtube: string
   tiktok: string
+  exibirCategoriasPatrocinadores: boolean
 }
 
 // Valores padrão (fallback enquanto o backend não responde ou não tem dados)
@@ -50,6 +51,7 @@ export const configPadrao: Configuracoes = {
   facebook:  'https://facebook.com/gorilarise',
   youtube:   'https://youtube.com/gorilarise',
   tiktok:    '',
+  exibirCategoriasPatrocinadores: false,
 }
 
 export function useConfiguracoes() {

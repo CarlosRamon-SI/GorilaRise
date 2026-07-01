@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { Save, MapPin, Phone, Clock, Share2, Mail, Bell, Info } from 'lucide-react'
+import { Save, MapPin, Phone, Clock, Share2, Mail, Bell, Info, Building2 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface HorarioDia {
@@ -43,6 +43,7 @@ interface Configuracoes {
   emailPagamentoConfirmado: boolean
   emailPlanoVencendo: boolean
   emailPlanoVencido: boolean
+  exibirCategoriasPatrocinadores: boolean
 }
 
 const DIAS = [
@@ -65,6 +66,7 @@ const emptyConfig = (): Configuracoes => ({
   smtpHost: '', smtpPort: 587, smtpUser: '', smtpSenha: '', smtpFromNome: 'Gorila Rise', smtpFromEmail: '', smtpTLS: true,
   emailBoasVindas: true, emailUsuarioAtivado: true, emailMatriculaAtivada: true,
   emailMatriculaCancelada: true, emailPagamentoConfirmado: true, emailPlanoVencendo: true, emailPlanoVencido: false,
+  exibirCategoriasPatrocinadores: false,
 })
 
 function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
@@ -414,6 +416,25 @@ export default function Configuracoes() {
         <p className="mt-3 text-xs text-zinc-500">
           Deixe o host em branco para desabilitar o envio de emails. A senha não é exibida após salvar por segurança.
         </p>
+      </section>
+
+      {/* Exibição Pública */}
+      <section className="bg-zinc-900 rounded-xl p-6 border border-zinc-800">
+        <SectionTitle icon={Building2} title="Exibição Pública" />
+        <p className="text-xs text-zinc-500 mb-4">Controle o que é exibido para visitantes e associados no site.</p>
+        <div className="flex items-start gap-3 p-3 bg-zinc-800/60 rounded-lg border border-zinc-700/50 max-w-sm">
+          <button
+            type="button"
+            onClick={() => set('exibirCategoriasPatrocinadores', !config.exibirCategoriasPatrocinadores)}
+            className={`mt-0.5 w-9 h-5 rounded-full flex-shrink-0 transition-colors relative ${config.exibirCategoriasPatrocinadores ? 'bg-yellow-400' : 'bg-zinc-700'}`}
+          >
+            <span className={`absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.exibirCategoriasPatrocinadores ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
+          </button>
+          <div>
+            <p className={`text-sm font-medium ${config.exibirCategoriasPatrocinadores ? 'text-white' : 'text-zinc-500'}`}>Exibir categorias de patrocinadores</p>
+            <p className="text-xs text-zinc-600">Mostra os rótulos Platina, Ouro, Prata e Bronze na home e na página institucional</p>
+          </div>
+        </div>
       </section>
 
       {/* Notificações por Email */}

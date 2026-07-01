@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '@/lib/api'
+import { useConfiguracoes } from '@/hooks/useConfiguracoes'
 import { ExternalLink } from 'lucide-react'
 
 interface Patrocinador {
@@ -98,6 +99,7 @@ function CatCarousel({ cat, items }: { cat: string; items: Patrocinador[] }) {
 }
 
 export default function PatrocinadoresSection() {
+  const cfg = useConfiguracoes()
   const { data: patrocinadores = [] } = useQuery<Patrocinador[]>({
     queryKey: ['patrocinadores-publico'],
     queryFn:  () => api.get('/patrocinadores?ativo=true'),
@@ -107,6 +109,7 @@ export default function PatrocinadoresSection() {
 
   if (patrocinadores.length === 0) return null
 
+  const mostrarCategorias = cfg.exibirCategoriasPatrocinadores
   const categorias = [...new Set(patrocinadores.map(p => p.categoria))]
     .sort((a, b) => CAT_ORDER[a] - CAT_ORDER[b])
 
@@ -118,19 +121,23 @@ export default function PatrocinadoresSection() {
           <h2 className="text-2xl font-black text-gorila-primary">Nossos Patrocinadores</h2>
         </div>
 
-        <div className="space-y-10">
-          {categorias.map(cat => (
-            <div key={cat}>
-              <div className="flex items-center gap-3 mb-5">
-                <div className={`text-[10px] font-bold uppercase tracking-widest border px-2 py-0.5 rounded-full ${CAT_STYLE[cat]}`}>
-                  {CAT_LABEL[cat]}
+        {mostrarCategorias ? (
+          <div className="space-y-10">
+            {categorias.map(cat => (
+              <div key={cat}>
+                <div className="flex items-center gap-3 mb-5">
+                  <div className={`text-[10px] font-bold uppercase tracking-widest border px-2 py-0.5 rounded-full ${CAT_STYLE[cat]}`}>
+                    {CAT_LABEL[cat]}
+                  </div>
+                  <div className="flex-1 h-px bg-gray-100" />
                 </div>
-                <div className="flex-1 h-px bg-gray-100" />
+                <CatCarousel cat={cat} items={patrocinadores.filter(p => p.categoria === cat)} />
               </div>
-              <CatCarousel cat={cat} items={patrocinadores.filter(p => p.categoria === cat)} />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <CatCarousel cat="OURO" items={patrocinadores} />
+        )}
       </div>
     </section>
   )
