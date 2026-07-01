@@ -681,12 +681,12 @@ export default function PainelAtleta() {
                 Esta funcionalidade requer uma matrícula ativa. Fale com a administração do clube.
               </div>
             )}
-            {tab === 'anamnese'       && (isLoading || matriculaAtiva ? <TabAnamnese /> : null)}
-            {tab === 'checkin'        && (isLoading || matriculaAtiva ? <TabCheckin /> : null)}
-            {tab === 'recordes'       && (isLoading || matriculaAtiva ? <TabRecordes /> : null)}
-            {tab === 'prontuario'     && (isLoading || matriculaAtiva ? <TabProntuario /> : null)}
-            {tab === 'foto-inicial'   && (isLoading || matriculaAtiva ? <TabFotos tipo="INICIAL" /> : null)}
-            {tab === 'foto-progresso' && (isLoading || matriculaAtiva ? <TabFotos tipo="PROGRESSO" /> : null)}
+            {tab === 'anamnese'       && !!matriculaAtiva && <TabAnamnese />}
+            {tab === 'checkin'        && !!matriculaAtiva && <TabCheckin />}
+            {tab === 'recordes'       && !!matriculaAtiva && <TabRecordes />}
+            {tab === 'prontuario'     && !!matriculaAtiva && <TabProntuario />}
+            {tab === 'foto-inicial'   && !!matriculaAtiva && <TabFotos tipo="INICIAL" />}
+            {tab === 'foto-progresso' && !!matriculaAtiva && <TabFotos tipo="PROGRESSO" />}
             {tab === 'cronometro'     && <TimerSystem />}
 
             {tab === 'notificacoes' && (
