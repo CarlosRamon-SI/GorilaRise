@@ -56,8 +56,9 @@ interface Notificacao {
   id: number; titulo: string; corpo: string; tipo: string; criadoEm: string
 }
 
-function iniciais(nome: string) {
-  return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+function iniciais(nome?: string) {
+  if (!nome) return '?'
+  return nome.trim().split(/\s+/).slice(0, 2).map(n => n[0] ?? '').join('').toUpperCase() || '?'
 }
 
 const MENU = [
@@ -154,7 +155,7 @@ function FichaTreinoTab() {
 }
 
 export default function PainelAtleta() {
-  const { user, logout } = useAuth()
+  const { user, logout, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [tab, setTab] = useState('dashboard')
   const [clock, setClock] = useState(new Date())
@@ -194,7 +195,8 @@ export default function PainelAtleta() {
     retry: false,
   })
 
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    .split('/').reverse().join('-')
   const { data: wods = [] } = useQuery<WOD[]>({
     queryKey: ['wod-hoje'],
     queryFn: () => api.get('/treinos/wod'),
@@ -235,8 +237,8 @@ export default function PainelAtleta() {
       queryClient.invalidateQueries({ queryKey: ['turmas-dashboard'] })
       setShowCheckinDrop(false)
       toast.success('Check-in realizado!')
-    } catch (err: any) {
-      toast.error(err.message ?? 'Erro ao fazer check-in.')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao fazer check-in.')
     } finally {
       setCheckinInProgress(null)
     }
@@ -244,9 +246,14 @@ export default function PainelAtleta() {
 
   const handleLogout = () => { logout(); navigate('/') }
 
+  // Redirect unauthenticated users instead of showing a blank screen
+  useEffect(() => {
+    if (!authLoading && !user) navigate('/login', { replace: true })
+  }, [user, authLoading, navigate])
+
   if (!user) return null
 
-  const matriculaAtiva = perfil?.matriculas?.find(m => m.status === 'ATIVA')
+  const matriculaAtiva = !isLoading ? perfil?.matriculas?.find(m => m.status === 'ATIVA') : undefined
 
   return (
     <div className="min-h-screen bg-[#f4f4f4]">
@@ -478,7 +485,7 @@ export default function PainelAtleta() {
                   <div className="min-w-0 flex-1">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-1">Agora</p>
                     <div className="text-3xl sm:text-4xl font-black font-mono text-white leading-none tracking-tight">
-                      {clock.toLocaleTimeString('pt-BR')}
+                      {clock.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
                     </div>
                     <p className="text-gorila-yellow text-[11px] mt-1.5 capitalize font-medium truncate">
                       {clock.toLocaleDateString('pt-BR', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -668,17 +675,18 @@ export default function PainelAtleta() {
             )}
 
             {tab === 'ficha'          && <FichaTreinoTab />}
-            {(['anamnese','checkin','recordes','prontuario','foto-inicial','foto-progresso'] as const).includes(tab as any) && !matriculaAtiva && (
+
+            {(['anamnese','checkin','recordes','prontuario','foto-inicial','foto-progresso'] as const).includes(tab as any) && !isLoading && !matriculaAtiva && (
               <div className="mx-4 mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-yellow-600 text-sm">
                 Esta funcionalidade requer uma matrícula ativa. Fale com a administração do clube.
               </div>
             )}
-            {tab === 'anamnese'       && <TabAnamnese />}
-            {tab === 'checkin'        && <TabCheckin />}
-            {tab === 'recordes'       && <TabRecordes />}
-            {tab === 'prontuario'     && <TabProntuario />}
-            {tab === 'foto-inicial'   && <TabFotos tipo="INICIAL" />}
-            {tab === 'foto-progresso' && <TabFotos tipo="PROGRESSO" />}
+            {tab === 'anamnese'       && (isLoading || matriculaAtiva ? <TabAnamnese /> : null)}
+            {tab === 'checkin'        && (isLoading || matriculaAtiva ? <TabCheckin /> : null)}
+            {tab === 'recordes'       && (isLoading || matriculaAtiva ? <TabRecordes /> : null)}
+            {tab === 'prontuario'     && (isLoading || matriculaAtiva ? <TabProntuario /> : null)}
+            {tab === 'foto-inicial'   && (isLoading || matriculaAtiva ? <TabFotos tipo="INICIAL" /> : null)}
+            {tab === 'foto-progresso' && (isLoading || matriculaAtiva ? <TabFotos tipo="PROGRESSO" /> : null)}
             {tab === 'cronometro'     && <TimerSystem />}
 
             {tab === 'notificacoes' && (

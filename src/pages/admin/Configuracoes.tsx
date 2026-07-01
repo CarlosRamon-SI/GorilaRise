@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { Save, MapPin, Phone, Clock, Share2 } from 'lucide-react'
+import { Save, MapPin, Phone, Clock, Share2, Mail, Bell, Info } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface HorarioDia {
   aberto: boolean
@@ -24,6 +25,24 @@ interface Configuracoes {
   facebook: string
   youtube: string
   tiktok: string
+
+  // SMTP
+  smtpHost: string
+  smtpPort: number
+  smtpUser: string
+  smtpSenha: string
+  smtpFromNome: string
+  smtpFromEmail: string
+  smtpTLS: boolean
+
+  // Toggles de email
+  emailBoasVindas: boolean
+  emailUsuarioAtivado: boolean
+  emailMatriculaAtivada: boolean
+  emailMatriculaCancelada: boolean
+  emailPagamentoConfirmado: boolean
+  emailPlanoVencendo: boolean
+  emailPlanoVencido: boolean
 }
 
 const DIAS = [
@@ -43,6 +62,9 @@ const emptyConfig = (): Configuracoes => ({
   telefone: '', whatsapp: '', email: '',
   horarios: Object.fromEntries(DIAS.map(d => [d.key, { ...DEFAULT_HORARIO }])),
   instagram: '', facebook: '', youtube: '', tiktok: '',
+  smtpHost: '', smtpPort: 587, smtpUser: '', smtpSenha: '', smtpFromNome: 'Gorila Rise', smtpFromEmail: '', smtpTLS: true,
+  emailBoasVindas: true, emailUsuarioAtivado: true, emailMatriculaAtivada: true,
+  emailMatriculaCancelada: true, emailPagamentoConfirmado: true, emailPlanoVencendo: true, emailPlanoVencido: false,
 })
 
 function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
@@ -60,17 +82,28 @@ export default function Configuracoes() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [testEmail, setTestEmail] = useState('')
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
   useEffect(() => {
     api.get<Configuracoes>('/configuracoes')
       .then(data => setConfig(prev => ({
         ...prev,
         ...data,
+        smtpSenha: '',
         horarios: { ...emptyConfig().horarios, ...data.horarios },
       })))
-      .catch(() => {})
+      .catch(err => setError(err.message ?? 'Erro ao carregar configurações.'))
       .finally(() => setLoading(false))
   }, [])
+
+  // Auto-clear success banner after 3s without leaking a timer
+  useEffect(() => {
+    if (!success) return
+    const id = setTimeout(() => setSuccess(false), 3000)
+    return () => clearTimeout(id)
+  }, [success])
 
   function set<K extends keyof Configuracoes>(field: K, value: Configuracoes[K]) {
     setConfig(prev => ({ ...prev, [field]: value }))
@@ -89,13 +122,28 @@ export default function Configuracoes() {
     setError('')
     setSuccess(false)
     try {
-      await api.patch('/admin/configuracoes', config)
+      const payload = { ...config }
+      if (!payload.smtpSenha) delete (payload as Partial<Configuracoes>).smtpSenha
+      await api.patch('/admin/configuracoes', payload)
       setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
       setError(err.message ?? 'Erro ao salvar configurações')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleEmailTest() {
+    if (!testEmail) return
+    setTesting(true)
+    setTestResult(null)
+    try {
+      await api.post('/admin/configuracoes/email-teste', { destinatario: testEmail })
+      setTestResult({ ok: true, msg: `Email enviado para ${testEmail}` })
+    } catch (err: any) {
+      setTestResult({ ok: false, msg: err.message ?? 'Falha ao enviar' })
+    } finally {
+      setTesting(false)
     }
   }
 
@@ -215,17 +263,17 @@ export default function Configuracoes() {
               {DIAS.map(({ key, label }) => {
                 const h = config.horarios[key]
                 return (
-                  <div key={key} className="flex items-center gap-3 py-2.5 border-b border-zinc-800/60 last:border-0">
+                  <div key={key} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5 border-b border-zinc-800/60 last:border-0">
                     <button
                       type="button"
                       onClick={() => setHorario(key, { aberto: !h.aberto })}
                       className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 relative ${h.aberto ? 'bg-yellow-400' : 'bg-zinc-700'}`}
                     >
-                      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${h.aberto ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                      <span className={`absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform ${h.aberto ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
                     </button>
-                    <span className={`text-sm w-28 flex-shrink-0 ${h.aberto ? 'text-white' : 'text-zinc-500'}`}>{label}</span>
+                    <span className={`text-sm flex-1 ${h.aberto ? 'text-white' : 'text-zinc-500'}`}>{label}</span>
                     {h.aberto ? (
-                      <div className="flex items-center gap-1.5 ml-auto">
+                      <div className="flex items-center gap-1.5 w-full sm:w-auto sm:ml-auto pl-12 sm:pl-0">
                         <input
                           type="time"
                           value={h.abertura}
@@ -276,7 +324,128 @@ export default function Configuracoes() {
         </div>
       </div>
 
+      {/* SMTP */}
+      <section className="bg-zinc-900 rounded-xl p-6 border border-zinc-800">
+        <div className="flex items-center gap-2 mb-4 pb-2 border-b border-zinc-800">
+          <Mail size={18} className="text-yellow-400" />
+          <h2 className="text-base font-semibold text-white flex-1">Configuração de E-mail (SMTP)</h2>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" className="text-zinc-500 hover:text-zinc-300 transition-colors">
+                <Info size={15} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-xs text-xs leading-relaxed bg-zinc-800 border-zinc-700 text-zinc-200 p-3">
+              <p className="font-semibold text-white mb-1">Como obter as configurações SMTP</p>
+              <p className="mb-2">Você precisa de uma conta de e-mail com envio SMTP habilitado. Exemplos comuns:</p>
+              <ul className="space-y-1 text-zinc-400">
+                <li><span className="text-zinc-200 font-medium">Gmail:</span> smtp.gmail.com · porta 587 · ative "Senhas de app" nas configurações de segurança da conta Google.</li>
+                <li><span className="text-zinc-200 font-medium">Outlook/Hotmail:</span> smtp.office365.com · porta 587.</li>
+                <li><span className="text-zinc-200 font-medium">Hostinger/cPanel:</span> use o host e credenciais do seu painel de hospedagem em "Contas de E-mail".</li>
+              </ul>
+              <p className="mt-2 text-zinc-500">Dica: prefira criar um e-mail dedicado para envios automáticos, ex: noreply@gorilarise.com.br</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <label className="block text-xs text-zinc-400 mb-1">Servidor SMTP (Host)</label>
+            <input type="text" value={config.smtpHost} onChange={e => set('smtpHost', e.target.value)} placeholder="smtp.gmail.com" className={inp} />
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Porta</label>
+            <input type="number" value={config.smtpPort} onChange={e => set('smtpPort', Number(e.target.value))} placeholder="587" className={inp} />
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Usuário / E-mail</label>
+            <input type="email" value={config.smtpUser} onChange={e => set('smtpUser', e.target.value)} placeholder="envio@gorilarise.com.br" className={inp} />
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Senha</label>
+            <input type="password" value={config.smtpSenha} onChange={e => set('smtpSenha', e.target.value)} placeholder="••••••••" className={inp} />
+          </div>
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <label className="block text-xs text-zinc-400 mb-1">TLS</label>
+              <button
+                type="button"
+                onClick={() => set('smtpTLS', !config.smtpTLS)}
+                className={`w-9 h-5 rounded-full transition-colors relative ${config.smtpTLS ? 'bg-yellow-400' : 'bg-zinc-700'}`}
+              >
+                <span className={`absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.smtpTLS ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Nome do remetente</label>
+            <input type="text" value={config.smtpFromNome} onChange={e => set('smtpFromNome', e.target.value)} placeholder="Gorila Rise" className={inp} />
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">E-mail remetente (From)</label>
+            <input type="email" value={config.smtpFromEmail} onChange={e => set('smtpFromEmail', e.target.value)} placeholder="noreply@gorilarise.com.br" className={inp} />
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-zinc-800">
+          <p className="text-xs text-zinc-400 mb-2 font-medium">Teste de envio</p>
+          <div className="flex gap-2 items-center">
+            <input
+              type="email"
+              value={testEmail}
+              onChange={e => { setTestEmail(e.target.value); setTestResult(null) }}
+              placeholder="seu@email.com"
+              className={inp + ' max-w-xs'}
+            />
+            <button
+              type="button"
+              onClick={handleEmailTest}
+              disabled={testing || !testEmail}
+              className="flex items-center gap-2 px-4 py-2 bg-zinc-700 text-white text-sm font-semibold rounded-lg hover:bg-zinc-600 transition-colors disabled:opacity-40"
+            >
+              <Mail size={14} />
+              {testing ? 'Enviando...' : 'Testar'}
+            </button>
+          </div>
+          {testResult && (
+            <p className={`mt-2 text-xs ${testResult.ok ? 'text-green-400' : 'text-red-400'}`}>
+              {testResult.ok ? '✓ ' : '✗ '}{testResult.msg}
+            </p>
+          )}
+        </div>
+        <p className="mt-3 text-xs text-zinc-500">
+          Deixe o host em branco para desabilitar o envio de emails. A senha não é exibida após salvar por segurança.
+        </p>
+      </section>
 
+      {/* Notificações por Email */}
+      <section className="bg-zinc-900 rounded-xl p-6 border border-zinc-800">
+        <SectionTitle icon={Bell} title="Notificações por E-mail" />
+        <p className="text-xs text-zinc-500 mb-4">Ative ou desative cada tipo de email enviado automaticamente pelo sistema.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {([
+            { field: 'emailBoasVindas'          as const, label: 'Boas-vindas',          desc: 'Enviado ao atleta ao se cadastrar no portal' },
+            { field: 'emailUsuarioAtivado'       as const, label: 'Conta ativada',         desc: 'Enviado quando o admin ativa a conta do atleta' },
+            { field: 'emailMatriculaAtivada'     as const, label: 'Matrícula ativada',     desc: 'Enviado quando uma matrícula é criada ou reativada' },
+            { field: 'emailMatriculaCancelada'   as const, label: 'Matrícula cancelada',   desc: 'Enviado quando uma matrícula é inativada' },
+            { field: 'emailPagamentoConfirmado'  as const, label: 'Pagamento confirmado',  desc: 'Enviado ao registrar um pagamento no financeiro' },
+            { field: 'emailPlanoVencendo'        as const, label: 'Plano vencendo',        desc: 'Lembrete enviado dias antes do vencimento' },
+            { field: 'emailPlanoVencido'         as const, label: 'Plano vencido',         desc: 'Aviso enviado quando o plano expira' },
+          ]).map(({ field, label, desc }) => (
+            <div key={field} className="flex items-start gap-3 p-3 bg-zinc-800/60 rounded-lg border border-zinc-700/50">
+              <button
+                type="button"
+                onClick={() => set(field, !config[field])}
+                className={`mt-0.5 w-9 h-5 rounded-full flex-shrink-0 transition-colors relative ${config[field] ? 'bg-yellow-400' : 'bg-zinc-700'}`}
+              >
+                <span className={`absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform ${config[field] ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
+              </button>
+              <div>
+                <p className={`text-sm font-medium ${config[field] ? 'text-white' : 'text-zinc-500'}`}>{label}</p>
+                <p className="text-xs text-zinc-600">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
     </form>
   )

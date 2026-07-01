@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
@@ -48,10 +48,14 @@ interface RankingItem {
 }
 
 export default function PainelSocio() {
-  const { user, logout } = useAuth()
+  const { user, logout, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [tab, setTab] = useState('dashboard')
   const qc = useQueryClient()
+
+  useEffect(() => {
+    if (!authLoading && !user) navigate('/login', { replace: true })
+  }, [user, authLoading, navigate])
 
   const { data: eventos = [] } = useQuery<Evento[]>({
     queryKey: ['eventos-socio'],

@@ -76,10 +76,10 @@ const Cadastro = () => {
     setFieldErrors(prev => ({ ...prev, [field]: '' }))
   }
 
-  const handleCpfBlur = useCallback(async () => {
+  const handleCpfBlur = useCallback(async (): Promise<CpfStatus> => {
     const cpf = formData.cpf
-    if (!cpf || cpf.replace(/\D/g, '').length < 11) return
-    if (!validarCPF(cpf)) { setCpfStatus('invalid'); return }
+    if (!cpf || cpf.replace(/\D/g, '').length < 11) return 'idle'
+    if (!validarCPF(cpf)) { setCpfStatus('invalid'); return 'invalid' }
     cpfAbortRef.current?.abort()
     cpfAbortRef.current = new AbortController()
     setCpfStatus('checking')
@@ -88,9 +88,12 @@ const Cadastro = () => {
         `/auth/check?cpf=${encodeURIComponent(cpf)}`,
         cpfAbortRef.current.signal,
       )
-      setCpfStatus(data.disponivel ? 'ok' : 'taken')
+      const status: CpfStatus = data.disponivel ? 'ok' : 'taken'
+      setCpfStatus(status)
+      return status
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') setCpfStatus('ok')
+      return 'ok'
     }
   }, [formData.cpf])
 
@@ -156,8 +159,9 @@ const Cadastro = () => {
       return setError(`Preencha os campos obrigatórios: ${missing.join(', ')}.`)
     }
     if (!validarCPF(formData.cpf)) return setError('CPF inválido.')
-    if (cpfStatus === 'idle') await handleCpfBlur()
-    if (cpfStatus === 'taken')   return setError('CPF já cadastrado.')
+    let resolvedCpfStatus = cpfStatus
+    if (cpfStatus === 'idle') resolvedCpfStatus = await handleCpfBlur()
+    if (resolvedCpfStatus === 'taken') return setError('CPF já cadastrado.')
     if (emailStatus === 'taken') return setError('E-mail já cadastrado.')
     if (formData.senha.length < 8) return setError('Senha deve ter mínimo 8 caracteres.')
     if (formData.senha !== formData.confirmarSenha) return setError('As senhas não coincidem.')
@@ -443,7 +447,7 @@ const Cadastro = () => {
                 {/* CAPTCHA */}
                 <div className="flex justify-center">
                   <HCaptcha
-                    sitekey={import.meta.env.VITE_HCAPTCHA_SITE_KEY ?? '10000000-ffff-ffff-ffff-000000000001'}
+                    sitekey={import.meta.env.VITE_HCAPTCHA_SITE_KEY as string}
                     onVerify={token => setCaptchaToken(token)}
                     onExpire={() => setCaptchaToken('')}
                     ref={captchaRef}

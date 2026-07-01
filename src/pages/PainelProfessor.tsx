@@ -79,8 +79,9 @@ interface Recorde {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function iniciais(nome: string) {
-  return nome.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase()
+function iniciais(nome?: string) {
+  if (!nome) return '?'
+  return nome.trim().split(/\s+/).slice(0, 2).map(n => n[0] ?? '').join('').toUpperCase() || '?'
 }
 
 function todayStr() {
@@ -141,10 +142,13 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
   const [editingFicha, setEditingFicha] = useState<Treino | null>(null)
   const [editForm, setEditForm] = useState({ titulo: '', exercicios: '' })
   const editFicha = useMutation({
-    mutationFn: () => api.patch(`/treinos/${editingFicha!.id}`, {
-      titulo: editForm.titulo,
-      exercicios: editForm.exercicios,
-    }),
+    mutationFn: () => {
+      if (!editingFicha) return Promise.reject(new Error('Nenhuma ficha selecionada'))
+      return api.patch(`/treinos/${editingFicha.id}`, {
+        titulo: editForm.titulo,
+        exercicios: editForm.exercicios,
+      })
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['treinos'] })
       setEditingFicha(null)
@@ -263,7 +267,7 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
                           <Pencil size={13} />
                         </button>
                         <button
-                          onClick={() => deleteFicha.mutate(t.id)}
+                          onClick={() => { if (window.confirm('Excluir esta ficha de treino?')) deleteFicha.mutate(t.id) }}
                           className="text-gray-300 hover:text-red-500 transition-colors">
                           <Trash2 size={14} />
                         </button>
@@ -378,7 +382,7 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
                         )}
                       </div>
                       <button
-                        onClick={() => deleteWod.mutate(w.id)}
+                        onClick={() => { if (window.confirm('Excluir este WOD?')) deleteWod.mutate(w.id) }}
                         className="text-gray-300 hover:text-red-500 transition-colors shrink-0 mt-0.5">
                         <Trash2 size={14} />
                       </button>
@@ -452,7 +456,7 @@ function TabTurmasProfessor() {
     setLoading(true)
     api.get<TurmaProfessor[]>('/professor/turmas')
       .then(setTurmas)
-      .catch(() => {})
+      .catch((e: any) => toast.error(e.message ?? 'Erro ao carregar turmas.'))
       .finally(() => setLoading(false))
   }
 
@@ -726,12 +730,12 @@ function TabCheckin({ atletas }: { atletas: Atleta[] }) {
       ) : (
         turmas.map(t => {
           const n = t.checkins.length
-          const vagas = t.capacidade - n
-          const pct = Math.round((n / t.capacidade) * 100)
+          const vagas = Math.max(0, t.capacidade - n)
+          const pct = t.capacidade > 0 ? Math.round((n / t.capacidade) * 100) : 0
           const cheia = vagas === 0
           // atletas que ainda não estão na lista de check-in desta turma
           const atletasDisponiveis = atletas.filter(a =>
-            !t.checkins.some(c => c.atletaEmail === a.email)
+            !t.checkins.some(c => c.atletaEmail.toLowerCase() === a.email.toLowerCase())
           )
 
           return (
@@ -920,11 +924,11 @@ function TabAnamneses() {
                   <p>{selected.anamnese.contatoEmergenciaNome} · {selected.anamnese.contatoEmergenciaTel}</p>
                 </div>
               )}
-              {selected.anamnese.objetivos.length > 0 && (
+              {(selected.anamnese.objetivos ?? []).length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 mb-1">Objetivos</p>
                   <div className="flex flex-wrap gap-1">
-                    {selected.anamnese.objetivos.map((o, i) => (
+                    {(selected.anamnese.objetivos ?? []).map((o, i) => (
                       <span key={i} className="text-xs bg-gorila-yellow/20 text-gorila-primary px-2 py-0.5 rounded-full font-medium">{o}</span>
                     ))}
                   </div>
@@ -1141,6 +1145,7 @@ function TabEscalacao({ atletas }: { atletas: Atleta[] }) {
   }
 
   async function handleDeletar(id: number) {
+    if (!window.confirm('Excluir esta escalação?')) return
     setDeletingId(id)
     try {
       await api.delete(`/escalacoes/${id}`)
@@ -1277,15 +1282,19 @@ export default function PainelProfessor() {
     enabled: !!user,
   })
 
+  const hoje = todayStr()
   const { data: checkinHoje = [] } = useQuery<TurmaCheckin[]>({
-    queryKey: ['checkin-turmas', todayStr()],
-    queryFn: () => api.get(`/admin/checkin?data=${todayStr()}`),
+    queryKey: ['checkin-turmas', hoje],
+    queryFn: () => api.get(`/admin/checkin?data=${hoje}`),
     enabled: !!user,
   })
   const totalCheckinHoje = checkinHoje.reduce((s, t) => s + t.checkins.length, 0)
 
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      navigate('/login', { replace: true })
+      return
+    }
     if (user.role !== 'TREINADOR' && user.role !== 'ADMIN') {
       navigate('/painel', { replace: true })
     }

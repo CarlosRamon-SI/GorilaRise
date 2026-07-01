@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { Plus, Pencil, Loader2, X, CheckCircle, XCircle, Users, Trash2 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { toast } from 'sonner'
 
 type StatusTurma = 'PROPOSTA' | 'PENDENTE_APROVACAO' | 'ATIVA' | 'INATIVA'
 
@@ -96,8 +97,10 @@ function ModalTurma({
       let t: Turma
       if (turma) {
         t = await api.patch<Turma>(`/admin/turmas/${turma.id}`, payload)
+        toast.success('Turma atualizada!')
       } else {
         t = await api.post<Turma>('/admin/turmas', { ...payload, codigo: form.codigo })
+        toast.success('Turma criada com sucesso!')
       }
       onSalvo(t)
       onClose()
@@ -194,6 +197,7 @@ function ModalTurma({
             <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as StatusTurma }))} className={inp}>
               <option value="ATIVA">Ativa</option>
               <option value="PROPOSTA">Proposta (aguarda aceite do treinador)</option>
+              <option value="PENDENTE_APROVACAO">Aguardando aprovação (admin)</option>
               <option value="INATIVA">Inativa</option>
             </select>
           </div>
@@ -261,10 +265,11 @@ function ModalAtletas({ turma, onClose }: { turma: Turma; onClose: () => void })
 
   async function handleAdd() {
     if (!selecionado) return
+    const novo = disponiveis.find(d => d.id === Number(selecionado))
+    if (!novo) { setErro('Atleta não encontrado.'); return }
     setAdding(true); setErro('')
     try {
-      await api.post(`/admin/turmas/${turma.id}/atletas`, { atletaId: Number(selecionado) })
-      const novo = disponiveis.find(d => d.id === Number(selecionado))!
+      await api.post(`/admin/turmas/${turma.id}/atletas`, { atletaId: novo.id })
       setInscritos(prev => [...prev, novo])
       setSelecionado('')
     } catch (e: any) {
@@ -388,7 +393,7 @@ export default function Turmas() {
       const updated = await api.patch<Turma>(`/admin/turmas/${t.id}/status`, { status: novoStatus })
       setTurmas(prev => prev.map(x => x.id === t.id ? { ...x, ...updated } : x))
     } catch (e: any) {
-      alert(e.message)
+      toast.error(e.message ?? 'Erro ao atualizar status.')
     } finally {
       setStatusLoading(null)
     }
@@ -503,7 +508,7 @@ export default function Turmas() {
                             </button>
                           </>
                         )}
-                        {t.status !== 'PENDENTE_APROVACAO' && (
+                        {t.status !== 'PENDENTE_APROVACAO' && t.status !== 'PROPOSTA' && (
                           <button
                             onClick={() => handleStatusChange(t, t.status === 'ATIVA' ? 'INATIVA' : 'ATIVA')}
                             disabled={statusLoading === t.id}

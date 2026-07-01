@@ -51,6 +51,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false)
   }, [])
 
+  // Check token expiry every minute while the app is open
+  useEffect(() => {
+    const id = setInterval(() => {
+      const token = localStorage.getItem('gorila_token')
+      if (token && isTokenExpired(token)) {
+        localStorage.removeItem('gorila_token')
+        localStorage.removeItem('gorila_user')
+        setUser(null)
+      }
+    }, 60_000)
+    return () => clearInterval(id)
+  }, [])
+
   const login = (token: string, userData: AuthUser) => {
     localStorage.setItem('gorila_token', token)
     localStorage.setItem('gorila_user', JSON.stringify(userData))

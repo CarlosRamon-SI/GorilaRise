@@ -9,6 +9,17 @@ function clearSession() {
   localStorage.removeItem('gorila_user')
 }
 
+// Prevents multiple simultaneous 401 redirects from concurrent requests
+let redirectingToLogin = false
+
+function handle401() {
+  clearSession()
+  if (!redirectingToLogin) {
+    redirectingToLogin = true
+    window.location.href = '/login'
+  }
+}
+
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken()
   const controller = new AbortController()
@@ -30,8 +41,6 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     const data = await res.json().catch(() => ({}))
 
     if (res.status === 401) {
-      clearSession()
-      window.location.href = '/login'
       throw new Error('Sessão expirada. Faça login novamente.')
     }
 
@@ -42,6 +51,11 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     }
 
     return data as T
+  } catch (err) {
+    if (err instanceof Error && err.message === 'Sessão expirada. Faça login novamente.') {
+      handle401()
+    }
+    throw err
   } finally {
     clearTimeout(timeoutId)
   }
@@ -68,7 +82,7 @@ export const api = {
       })
       if (res.status === 204) return undefined as T
       const data = await res.json().catch(() => ({}))
-      if (res.status === 401) { clearSession(); window.location.href = '/login'; throw new Error('Sessão expirada.') }
+      if (res.status === 401) { handle401(); throw new Error('Sessão expirada.') }
       if (!res.ok) throw new Error(data?.error ?? `Erro ${res.status}`)
       return data as T
     } finally {

@@ -21,7 +21,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Gorila Rise" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- manifest link is injected by vite-plugin-pwa — do not add it here -->
+    <!-- Capture beforeinstallprompt as early as possible, before any scripts load -->
+    <script>
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__pwaInstallPrompt = e;
+        window.dispatchEvent(new CustomEvent('pwaInstallReady'));
+      });
+    </script>
   </head>
 
   <body>

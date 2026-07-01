@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            urlPattern: /^https:\/\/.*\.adtecnologia\.com\.br\/api\/.*/i,
+            urlPattern: /^https:\/\/pressticket\.adtecnologia\.com\.br\/.*/i,
             handler: "NetworkFirst",
             options: {
               cacheName: "api-cache",

@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEffect, useState } from 'react'
 import {
@@ -176,6 +176,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export default function AdminLayout() {
   const { user, isLoggedIn, loading } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
@@ -184,15 +185,14 @@ export default function AdminLayout() {
       navigate('/login', { replace: true })
       return
     }
-    if (user?.role === 'ATLETA' || user?.role === 'SOCIO_TORCEDOR') {
-      navigate('/painel', { replace: true })
-    }
+    if (user?.role === 'ATLETA') navigate('/painel', { replace: true })
+    if (user?.role === 'SOCIO_TORCEDOR') navigate('/painel-socio', { replace: true })
   }, [loading, isLoggedIn, user, navigate])
 
-  // Close drawer on route change
+  // Close mobile drawer on route change
   useEffect(() => {
     setSidebarOpen(false)
-  }, [navigate])
+  }, [location.pathname])
 
   if (loading) return null
   if (!isLoggedIn || user?.role === 'ATLETA' || user?.role === 'SOCIO_TORCEDOR') return null

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -18,7 +18,17 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user, loading } = useAuth();
+
+  // Redirect already-authenticated users to their dashboard
+  useEffect(() => {
+    if (loading || !user) return
+    const dest = user.role === 'ADMIN' ? '/admin'
+               : user.role === 'TREINADOR' ? '/painel-professor'
+               : user.role === 'SOCIO_TORCEDOR' ? '/painel-socio'
+               : '/painel'
+    navigate(dest, { replace: true })
+  }, [user, loading, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

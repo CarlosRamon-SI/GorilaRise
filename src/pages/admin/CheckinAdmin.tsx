@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { CalendarCheck, Clock, Users, RefreshCw, CheckCircle } from 'lucide-react'
+import { CalendarCheck, Clock, Users, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 
 interface TurmaCheckin {
   id: number
@@ -14,17 +14,22 @@ interface TurmaCheckin {
 export default function CheckinAdmin() {
   const [turmas, setTurmas] = useState<TurmaCheckin[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [filtroData, setFiltroData] = useState(new Date().toISOString().slice(0, 10))
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  function carregar(data: string) {
+  useEffect(() => {
+    const controller = new AbortController()
     setLoading(true)
-    api.get<TurmaCheckin[]>(`/admin/checkin?data=${data}`)
+    setError('')
+    api.get<TurmaCheckin[]>(`/admin/checkin?data=${filtroData}`, controller.signal)
       .then(setTurmas)
-      .catch(() => {})
+      .catch(e => {
+        if (e instanceof Error && e.name !== 'AbortError') setError(e.message ?? 'Erro ao carregar dados.')
+      })
       .finally(() => setLoading(false))
-  }
-
-  useEffect(() => { carregar(filtroData) }, [filtroData])
+    return () => controller.abort()
+  }, [filtroData, refreshKey])
 
   const totalPresentes = turmas.reduce((s, t) => s + t.checkins.length, 0)
 
@@ -44,17 +49,24 @@ export default function CheckinAdmin() {
           className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 text-white"
         />
         <button
-          onClick={() => carregar(filtroData)}
+          onClick={() => setRefreshKey(k => k + 1)}
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 text-sm transition-colors"
         >
           <RefreshCw size={13} /> Atualizar
         </button>
       </div>
 
-      {!loading && (
+      {!loading && !error && (
         <p className="text-xs text-zinc-500 mb-6">
           {totalPresentes} presença{totalPresentes !== 1 ? 's' : ''} confirmada{totalPresentes !== 1 ? 's' : ''} em {turmas.length} turma{turmas.length !== 1 ? 's' : ''}
         </p>
+      )}
+
+      {error && (
+        <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/50 text-red-400 rounded-lg p-4 text-sm mb-6">
+          <AlertCircle size={16} className="shrink-0" />
+          {error}
+        </div>
       )}
 
       {loading ? (
@@ -70,8 +82,8 @@ export default function CheckinAdmin() {
         <div className="space-y-6">
           {turmas.map(t => {
             const n = t.checkins.length
-            const vagas = t.capacidade - n
-            const pct = Math.round((n / t.capacidade) * 100)
+            const vagas = Math.max(0, t.capacidade - n)
+            const pct = t.capacidade > 0 ? Math.round((n / t.capacidade) * 100) : 0
             const cheia = vagas === 0
             return (
               <div key={t.id} className={`bg-zinc-900 border rounded-xl p-5 ${cheia ? 'border-orange-500/40' : 'border-zinc-800'}`}>

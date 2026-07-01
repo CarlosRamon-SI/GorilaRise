@@ -27,6 +27,7 @@ function formatDias(dias: string | string[]): string {
 }
 
 function OcupacaoBar({ presente, capacidade }: { presente: number; capacidade: number }) {
+  if (!capacidade) return null
   const pct = Math.round((presente / capacidade) * 100)
   const cheia = presente >= capacidade
   return (
@@ -61,12 +62,15 @@ export default function TabCheckin() {
   const { data: turmas = [], isLoading } = useQuery<Turma[]>({
     queryKey: ['turmas-dashboard'],
     queryFn: () => api.get('/turmas'),
+    staleTime: 30_000,
+    retry: 1,
   })
 
-  const { data: historico = [], isLoading: histLoading } = useQuery<HistoricoItem[]>({
+  const histValido = histInicio <= histFim
+  const { data: historico = [], isLoading: histLoading, isError: histError } = useQuery<HistoricoItem[]>({
     queryKey: ['checkin-historico', histInicio, histFim],
     queryFn: () => api.get(`/checkin/historico?inicio=${histInicio}&fim=${histFim}`),
-    enabled: showHistorico,
+    enabled: showHistorico && histValido,
     retry: false,
   })
 
@@ -211,15 +215,20 @@ export default function TabCheckin() {
           <CardContent>
             {/* G-C10: date range picker */}
             <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <label className="text-xs text-gray-500 shrink-0">De</label>
-              <input type="date" value={histInicio} onChange={e => setHistInicio(e.target.value)}
+              <label htmlFor="hist-inicio" className="text-xs text-gray-500 shrink-0">De</label>
+              <input id="hist-inicio" type="date" value={histInicio} onChange={e => setHistInicio(e.target.value)}
                 className="text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-gorila-primary" />
-              <label className="text-xs text-gray-500 shrink-0">até</label>
-              <input type="date" value={histFim} onChange={e => setHistFim(e.target.value)}
+              <label htmlFor="hist-fim" className="text-xs text-gray-500 shrink-0">até</label>
+              <input id="hist-fim" type="date" value={histFim} onChange={e => setHistFim(e.target.value)}
                 className="text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-gorila-primary" />
             </div>
+            {!histValido && (
+              <p className="text-xs text-red-500 mb-3">A data inicial deve ser anterior à data final.</p>
+            )}
             {histLoading ? (
               <div className="flex justify-center py-4"><Loader2 size={18} className="animate-spin text-gorila-primary" /></div>
+            ) : histError ? (
+              <p className="text-sm text-red-500 text-center py-4">Erro ao carregar histórico.</p>
             ) : historico.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-4">Nenhum check-in no período.</p>
             ) : (
