@@ -49,20 +49,16 @@ function PatrocinadoresFooter() {
             <button onClick={() => setIdx(i => (i - 1 + pages) % pages)}
               className="shrink-0 text-white/30 hover:text-white transition-colors text-lg">‹</button>
           )}
-          <div className="flex flex-wrap justify-center items-center gap-4 flex-1">
+          <div className="flex flex-wrap justify-center items-center gap-6 flex-1">
             {slice.map(p => {
-              const inner = (
-                <div className="h-14 px-4 flex items-center justify-center rounded-lg bg-white/90 hover:bg-white transition-colors min-w-[80px] max-w-[140px]">
-                  {p.logoUrl
-                    ? <img src={p.logoUrl} alt={p.nome} className="h-9 w-auto max-w-[120px] object-contain"
-                        onError={e => { (e.currentTarget as HTMLImageElement).replaceWith(Object.assign(document.createElement('span'), { className: 'text-[11px] font-semibold text-gorila-primary text-center leading-tight', textContent: p.nome })) }} />
-                    : <span className="text-[11px] font-semibold text-gorila-primary text-center leading-tight">{p.nome}</span>}
-                </div>
-              )
+              const inner = p.logoUrl
+                ? <img src={p.logoUrl} alt={p.nome} className="h-[72px] w-auto max-w-[240px] object-contain"
+                    onError={e => { (e.currentTarget as HTMLImageElement).replaceWith(Object.assign(document.createElement('span'), { className: 'text-sm font-semibold text-white', textContent: p.nome })) }} />
+                : <span className="text-sm font-semibold text-white">{p.nome}</span>
               return p.link
                 ? <a key={p.id} href={p.link} target="_blank" rel="noreferrer" title={p.nome}
-                    className="opacity-70 hover:opacity-100 transition-opacity">{inner}</a>
-                : <div key={p.id} className="opacity-70" title={p.nome}>{inner}</div>
+                    className="opacity-70 hover:opacity-100 transition-opacity flex items-center">{inner}</a>
+                : <div key={p.id} className="opacity-70 flex items-center" title={p.nome}>{inner}</div>
             })}
           </div>
           {showControls && (
