@@ -14,7 +14,7 @@ let redirectingToLogin = false
 
 function handle401() {
   clearSession()
-  if (!redirectingToLogin) {
+  if (!redirectingToLogin && window.location.pathname !== '/login') {
     redirectingToLogin = true
     window.location.href = '/login'
   }
@@ -41,7 +41,12 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
     const data = await res.json().catch(() => ({}))
 
     if (res.status === 401) {
-      throw new Error('Sessão expirada. Faça login novamente.')
+      const onLoginPage = window.location.pathname === '/login'
+      throw new Error(
+        onLoginPage
+          ? (data?.error ?? 'Credenciais inválidas.')
+          : 'Sessão expirada. Faça login novamente.'
+      )
     }
 
     if (!res.ok) {
