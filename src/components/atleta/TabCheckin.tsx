@@ -126,7 +126,7 @@ export default function TabCheckin() {
         <CardContent>
           <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-700">
             <Clock size={14} className="mt-0.5 shrink-0" />
-            <span>Check-in disponível a partir de 2h antes da aula. Cancelamentos devem ser feitos com no mínimo 2h de antecedência.</span>
+            <span>Check-in disponível a partir de 2h antes da aula. Cancelamentos devem ser feitos com no mínimo 1h de antecedência.</span>
           </div>
         </CardContent>
       </Card>
