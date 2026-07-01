@@ -15,6 +15,8 @@ interface Turma {
   vagas: number
   capacidade: number
   checkedIn: boolean
+  disponivel: boolean
+  encerrada: boolean
 }
 
 interface HistoricoItem {
@@ -99,8 +101,19 @@ export default function TabCheckin() {
     }
   }
 
-  const meus = turmas.filter(t => t.checkedIn)
-  const disponíveis = turmas.filter(t => !t.checkedIn)
+  // Ordenação: elegíveis para check-in primeiro, depois já feitos, depois encerradas/futuras
+  const ordenadas = [...turmas].sort((a, b) => {
+    const peso = (t: Turma) =>
+      !t.encerrada && t.disponivel && !t.checkedIn && t.vagas > 0 ? 0  // pode fazer check-in
+      : t.checkedIn                                                  ? 1  // já fez
+      : !t.encerrada && t.disponivel && t.vagas === 0               ? 2  // lotada mas aberta
+      : !t.encerrada && !t.disponivel                               ? 3  // janela ainda não abriu
+      :                                                               4  // encerrada
+    return peso(a) - peso(b) || a.horario.localeCompare(b.horario)
+  })
+
+  const meus = ordenadas.filter(t => t.checkedIn)
+  const disponíveis = ordenadas.filter(t => !t.checkedIn)
 
   return (
     <div className="space-y-5">
@@ -166,13 +179,21 @@ export default function TabCheckin() {
               {disponíveis.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-4">Você já fez check-in em todas as turmas de hoje.</p>
               ) : disponíveis.map(t => {
-                const lotada = t.vagas === 0
+                const lotada     = t.vagas === 0
+                const bloqueada  = t.encerrada || !t.disponivel
                 return (
-                  <div key={t.id} className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${lotada ? 'border-red-200 bg-red-50/30' : 'border-gray-200 hover:border-gorila-primary/30'}`}>
+                  <div key={t.id} className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                    t.encerrada     ? 'border-gray-100 bg-gray-50/50 opacity-60'
+                    : lotada        ? 'border-red-200 bg-red-50/30'
+                    : !t.disponivel ? 'border-gray-200 bg-gray-50/30'
+                    :                 'border-gray-200 hover:border-gorila-primary/30'
+                  }`}>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium truncate">{t.modalidade}</p>
-                        {lotada && <span className="text-[10px] font-bold text-red-500 bg-red-100 px-1.5 py-0.5 rounded shrink-0">LOTADA</span>}
+                        {t.encerrada     && <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded shrink-0">ENCERRADA</span>}
+                        {!t.encerrada && lotada && <span className="text-[10px] font-bold text-red-500 bg-red-100 px-1.5 py-0.5 rounded shrink-0">LOTADA</span>}
+                        {!t.encerrada && !t.disponivel && <span className="text-[10px] font-bold text-blue-400 bg-blue-50 px-1.5 py-0.5 rounded shrink-0">EM BREVE</span>}
                       </div>
                       <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
                         <Clock size={11} /> {t.horario} · {formatDias(t.dias)}
@@ -182,13 +203,17 @@ export default function TabCheckin() {
                     </div>
                     <Button size="sm"
                       onClick={() => handleCheckin(t)}
-                      disabled={actionId === t.id || lotada}
+                      disabled={actionId === t.id || lotada || bloqueada}
                       className="ml-3 shrink-0 bg-gorila-primary hover:bg-gorila-dark text-white text-xs disabled:opacity-50">
                       {actionId === t.id
                         ? <Loader2 size={12} className="animate-spin" />
-                        : lotada
-                          ? <><Users size={12} className="mr-1" />Lotada</>
-                          : 'Check-in'}
+                        : t.encerrada
+                          ? 'Encerrada'
+                          : lotada
+                            ? <><Users size={12} className="mr-1" />Lotada</>
+                            : !t.disponivel
+                              ? 'Em breve'
+                              : 'Check-in'}
                     </Button>
                   </div>
                 )
