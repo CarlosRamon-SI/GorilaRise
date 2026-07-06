@@ -14,7 +14,7 @@ import DietPrescription from '@/components/DietPrescription'
 import {
   LayoutDashboard, Users, Dumbbell, CheckCircle, FileText,
   LogOut, ChevronRight, Target, BarChart3, Shield, Plus, Trash2,
-  Calendar, Trophy, AlertCircle, Salad, Pencil, Camera, GraduationCap, XCircle, Loader2,
+  Calendar, Trophy, AlertCircle, Salad, Pencil, Camera, GraduationCap, XCircle, Loader2, Check,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -23,7 +23,7 @@ interface Atleta {
   id: number
   nome: string
   email: string
-  matriculas?: { status: string }[]
+  matriculas?: { status: string; modalidade?: { id: number; nome: string } }[]
 }
 
 interface Treino {
@@ -42,6 +42,15 @@ interface WOD {
   data: string
 }
 
+
+interface TemplateTreino {
+  id: number
+  titulo: string
+  descricao?: string | null
+  exercicios?: string | null
+  categoria?: string | null
+  criadoEm: string
+}
 
 interface AnamneseData {
   id: number
@@ -106,20 +115,47 @@ const MENU = [
   { id: 'anamneses',  label: 'Fichas de Anamnese', short: 'Anamnese',  icon: FileText },
   { id: 'desempenho', label: 'Desempenho',         short: 'Desempen.', icon: BarChart3 },
   { id: 'escalacao',  label: 'Escalação',          short: 'Escalação', icon: Target },
-  { id: 'dieta',      label: 'Calculadora de Dieta', short: 'Dieta',   icon: Salad, funcoes: ['PROFESSOR', 'NUTRICIONISTA'] },
+  { id: 'dieta',      label: 'Calculadora de Dieta', short: 'Dieta',   icon: Salad },
 ]
 
 // ── Tab: Prescrever Treino ─────────────────────────────────────────────────
 function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
   const qc = useQueryClient()
-  const [sub, setSub] = useState<'fichas' | 'wod'>('fichas')
+  const [sub, setSub] = useState<'fichas' | 'wod' | 'biblioteca'>('fichas')
 
   // Fichas
   const { data: fichas = [] } = useQuery<Treino[]>({
     queryKey: ['treinos'],
     queryFn: () => api.get('/treinos'),
   })
+  // Templates
+  const { data: templates = [] } = useQuery<TemplateTreino[]>({
+    queryKey: ['treinos-templates'],
+    queryFn: () => api.get('/treinos/templates'),
+  })
+  const [templateForm, setTemplateForm] = useState({ titulo: '', descricao: '', exercicios: '', categoria: '' })
+  const createTemplate = useMutation({
+    mutationFn: () => api.post('/treinos/templates', templateForm),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['treinos-templates'] })
+      setTemplateForm({ titulo: '', descricao: '', exercicios: '', categoria: '' })
+      toast.success('Template salvo na biblioteca!')
+    },
+    onError: (e: any) => toast.error(e.message),
+  })
+  const deleteTemplate = useMutation({
+    mutationFn: (id: number) => api.delete(`/treinos/templates/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['treinos-templates'] }),
+    onError: (e: any) => toast.error(e.message),
+  })
+
   const [fichaForm, setFichaForm] = useState({ atletaId: '', titulo: '', exercicios: '' })
+
+  function applyTemplate(t: TemplateTreino) {
+    setFichaForm(f => ({ ...f, titulo: t.titulo, exercicios: t.exercicios ?? '' }))
+    setSub('fichas')
+    toast.success(`Template "${t.titulo}" aplicado`)
+  }
   const createFicha = useMutation({
     mutationFn: () => api.post('/treinos', {
       atletaId: Number(fichaForm.atletaId),
@@ -180,15 +216,13 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        <button onClick={() => setSub('fichas')}
-          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${sub === 'fichas' ? 'bg-gorila-primary text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gorila-primary'}`}>
-          Fichas Individuais
-        </button>
-        <button onClick={() => setSub('wod')}
-          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${sub === 'wod' ? 'bg-gorila-primary text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gorila-primary'}`}>
-          WODs
-        </button>
+      <div className="flex gap-2 flex-wrap">
+        {(['fichas', 'wod', 'biblioteca'] as const).map(s => (
+          <button key={s} onClick={() => setSub(s)}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${sub === s ? 'bg-gorila-primary text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gorila-primary'}`}>
+            {s === 'fichas' ? 'Fichas Individuais' : s === 'wod' ? 'WODs' : `Biblioteca (${templates.length})`}
+          </button>
+        ))}
       </div>
 
       {sub === 'fichas' && (
@@ -200,6 +234,18 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {templates.length > 0 && (
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Usar template da biblioteca</label>
+                  <select
+                    defaultValue=""
+                    onChange={e => { const t = templates.find(t => String(t.id) === e.target.value); if (t) applyTemplate(t) }}
+                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gorila-primary">
+                    <option value="">— selecione um template —</option>
+                    {templates.map(t => <option key={t.id} value={t.id}>{t.titulo}{t.categoria ? ` · ${t.categoria}` : ''}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Atleta</label>
@@ -302,6 +348,77 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
               </div>
             </DialogContent>
           </Dialog>
+        </div>
+      )}
+
+      {sub === 'biblioteca' && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-gorila-primary flex items-center gap-2 text-sm">
+                <Plus size={15} /> Novo Template
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Título *</label>
+                  <Input placeholder="Ex: Treino A – Força" value={templateForm.titulo}
+                    onChange={e => setTemplateForm(f => ({ ...f, titulo: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Categoria</label>
+                  <Input placeholder="Ex: Musculação, Funcional…" value={templateForm.categoria}
+                    onChange={e => setTemplateForm(f => ({ ...f, categoria: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Descrição / Orientações</label>
+                <Input placeholder="Foco em execução lenta, intervalo 90s..." value={templateForm.descricao}
+                  onChange={e => setTemplateForm(f => ({ ...f, descricao: e.target.value }))} />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Exercícios</label>
+                <Textarea placeholder="Supino 4x10, Crucifixo 3x12..." value={templateForm.exercicios}
+                  onChange={e => setTemplateForm(f => ({ ...f, exercicios: e.target.value }))} rows={4} />
+              </div>
+              <Button onClick={() => createTemplate.mutate()} disabled={!templateForm.titulo || createTemplate.isPending}
+                size="sm" className="bg-gorila-primary text-white hover:bg-gorila-primary/90">
+                {createTemplate.isPending ? 'Salvando...' : 'Salvar na Biblioteca'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {templates.length === 0 ? (
+            <Card><CardContent className="py-10 text-center text-gray-400 text-sm">Nenhum template na biblioteca ainda.</CardContent></Card>
+          ) : (
+            <div className="space-y-2">
+              {templates.map(t => (
+                <Card key={t.id} className="hover:border-gorila-primary/30 transition-colors">
+                  <CardContent className="py-3 px-4 flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-sm text-gorila-primary truncate">{t.titulo}</p>
+                        {t.categoria && <span className="text-[10px] bg-gorila-yellow/20 text-gorila-primary font-bold px-2 py-0.5 rounded-full">{t.categoria}</span>}
+                      </div>
+                      {t.descricao && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{t.descricao}</p>}
+                      {t.exercicios && <p className="text-xs text-gray-400 mt-1 font-mono line-clamp-2">{t.exercicios}</p>}
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button size="sm" variant="outline" onClick={() => applyTemplate(t)}
+                        className="text-xs h-7 px-2 border-gorila-primary text-gorila-primary hover:bg-gorila-primary hover:text-white">
+                        Usar
+                      </Button>
+                      <button onClick={() => { if (confirm('Remover template?')) deleteTemplate.mutate(t.id) }}
+                        className="text-gray-400 hover:text-red-500 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1087,11 +1204,36 @@ function TabDesempenho({ atletas }: { atletas: Atleta[] }) {
   )
 }
 
+// ── DietTab ────────────────────────────────────────────────────────────────
+function DietTab({ atletas }: { atletas: Atleta[] }) {
+  const [atletaSelecionado, setAtletaSelecionado] = useState('')
+  const atletaNome = atletas.find(a => String(a.id) === atletaSelecionado)?.nome ?? ''
+  return (
+    <div className="space-y-3">
+      <Card>
+        <CardContent className="py-4 px-4">
+          <label className="text-xs text-gray-500 mb-1 block">Calcular para o atleta</label>
+          <select value={atletaSelecionado} onChange={e => setAtletaSelecionado(e.target.value)}
+            className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gorila-primary max-w-sm">
+            <option value="">— selecione um atleta —</option>
+            {atletas.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+          </select>
+        </CardContent>
+      </Card>
+      <DietPrescription userName={atletaNome || 'Atleta'} />
+    </div>
+  )
+}
+
 // ── TabEscalacao ───────────────────────────────────────────────────────────
 interface EscalacaoAtleta { atletaId: number; posicao: string | null; nome: string }
 interface Escalacao {
   id: number; titulo: string; descricao?: string | null; data: string
   atletas: EscalacaoAtleta[]
+}
+
+function inicialAtleta(nome: string) {
+  return nome.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase()
 }
 
 function TabEscalacao({ atletas }: { atletas: Atleta[] }) {
@@ -1159,103 +1301,218 @@ function TabEscalacao({ atletas }: { atletas: Atleta[] }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold flex items-center gap-2"><Target size={18} className="text-gorila-yellow" /> Escalação de Times</h2>
-        <Button size="sm" onClick={() => setModalOpen(true)} className="bg-gorila-yellow text-gorila-primary hover:bg-yellow-300 font-bold">
-          <Plus size={14} className="mr-1" /> Nova Escalação
-        </Button>
+        <div className="flex items-center gap-2.5">
+          <Target size={18} className="text-gorila-yellow" />
+          <h2 className="text-base font-black tracking-tight text-gorila-primary uppercase">Escalação de Times</h2>
+        </div>
+        <button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-1.5 bg-gorila-yellow text-gorila-primary text-xs font-black px-3.5 py-2 rounded-lg hover:bg-yellow-300 active:scale-95 transition-all">
+          <Plus size={13} /> Nova escalação
+        </button>
       </div>
 
+      {/* Loading */}
       {isLoading && (
-        <div className="flex justify-center py-12"><Loader2 size={28} className="animate-spin text-gorila-yellow" /></div>
+        <div className="flex justify-center py-16">
+          <Loader2 size={24} className="animate-spin text-gorila-yellow opacity-60" />
+        </div>
       )}
 
+      {/* Empty */}
       {!isLoading && escalacoes.length === 0 && (
-        <Card><CardContent className="py-14 text-center text-zinc-400 text-sm">Nenhuma escalação criada ainda.</CardContent></Card>
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+            <Target size={20} className="text-gray-400" />
+          </div>
+          <p className="text-sm text-gray-400">Nenhuma escalação criada ainda.</p>
+          <button onClick={() => setModalOpen(true)} className="text-xs text-gorila-yellow underline underline-offset-2">
+            Criar primeira escalação
+          </button>
+        </div>
       )}
 
+      {/* Cards — lineup sheet style */}
       <div className="space-y-3">
-        {escalacoes.map(e => (
-          <Card key={e.id} className="border-zinc-800">
-            <CardContent className="py-4 px-5">
+        {escalacoes.map(esc => (
+          <div key={esc.id}
+            className="relative bg-[#111010] border border-zinc-800 rounded-xl overflow-hidden"
+            style={{ borderLeft: '3px solid #f0c419' }}>
+            <div className="px-5 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-white truncate">{e.titulo}</p>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    {new Date(e.data).toLocaleDateString('pt-BR')}
-                    {e.descricao && <span className="ml-2 text-zinc-500">— {e.descricao}</span>}
-                  </p>
-                  {e.atletas.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {e.atletas.map(a => (
-                        <span key={a.atletaId} className="text-xs bg-zinc-800 border border-zinc-700 rounded-full px-2 py-0.5 text-zinc-300">
-                          {a.nome}{a.posicao ? ` · ${a.posicao}` : ''}
-                        </span>
+                  {/* Title row */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <p className="font-black text-white text-sm tracking-tight truncate">{esc.titulo}</p>
+                    <span className="text-[10px] font-bold bg-gorila-yellow/15 text-gorila-yellow px-2 py-0.5 rounded-full shrink-0 tabular-nums">
+                      {new Date(esc.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
+                    </span>
+                    {esc.atletas.length > 0 && (
+                      <span className="text-[10px] font-semibold text-zinc-500 shrink-0">
+                        {esc.atletas.length} atleta{esc.atletas.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  {esc.descricao && (
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{esc.descricao}</p>
+                  )}
+
+                  {/* Athlete roster */}
+                  {esc.atletas.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {esc.atletas.map(a => (
+                        <div key={a.atletaId}
+                          className="flex items-center gap-1.5 bg-zinc-800/80 border border-zinc-700/60 rounded-lg px-2.5 py-1">
+                          <span className="w-5 h-5 rounded-full bg-zinc-700 flex items-center justify-center text-[9px] font-black text-zinc-300 shrink-0">
+                            {inicialAtleta(a.nome)}
+                          </span>
+                          <span className="text-xs text-zinc-300 font-medium">{a.nome.split(' ')[0]}</span>
+                          {a.posicao && (
+                            <span className="text-[10px] font-mono font-bold text-gorila-yellow bg-gorila-yellow/10 px-1 rounded">
+                              {a.posicao}
+                            </span>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}
                 </div>
+
+                {/* Delete */}
                 <button
-                  disabled={deletingId === e.id}
-                  onClick={() => handleDeletar(e.id)}
-                  className="text-zinc-500 hover:text-red-400 transition-colors disabled:opacity-40 mt-0.5 shrink-0">
-                  {deletingId === e.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                  disabled={deletingId === esc.id}
+                  onClick={() => handleDeletar(esc.id)}
+                  className="text-zinc-600 hover:text-red-400 transition-colors disabled:opacity-30 shrink-0 mt-0.5 p-1 rounded hover:bg-zinc-800">
+                  {deletingId === esc.id
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : <Trash2 size={14} />}
                 </button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 
+      {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={open => { setModalOpen(open); if (!open) resetModal() }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Nova Escalação</DialogTitle></DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div>
-              <label className="text-xs text-zinc-400 mb-1 block">Título *</label>
-              <Input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: Equipe WOD Sábado" />
-            </div>
-            <div>
-              <label className="text-xs text-zinc-400 mb-1 block">Data *</label>
-              <Input type="date" value={data} onChange={e => setData(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs text-zinc-400 mb-1 block">Descrição (opcional)</label>
-              <Textarea value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Observações…" rows={2} />
-            </div>
-            <div>
-              <label className="text-xs text-zinc-400 mb-2 block">Atletas</label>
-              {atletas.length === 0 && <p className="text-xs text-zinc-500">Nenhum atleta vinculado.</p>}
-              <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                {atletas.map(a => {
-                  const sel = selecionados.find(s => s.atletaId === a.id)
-                  return (
-                    <div key={a.id} className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleAtleta(a.id)}
-                        className={`flex-1 text-left text-sm px-3 py-1.5 rounded-lg border transition-colors ${sel ? 'border-gorila-yellow bg-gorila-yellow/10 text-white' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>
-                        {a.nome}
-                      </button>
-                      {sel && (
-                        <Input
-                          value={sel.posicao}
-                          onChange={e => setPosicao(a.id, e.target.value)}
-                          placeholder="Posição"
-                          className="w-28 text-xs h-8"
-                        />
-                      )}
-                    </div>
-                  )
-                })}
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-[#111010] border-zinc-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white font-black tracking-tight flex items-center gap-2">
+              <Target size={16} className="text-gorila-yellow" /> Nova escalação
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-1">
+            {/* Título + Data side by side */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 sm:col-span-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1.5 block">Título *</label>
+                <input
+                  value={titulo}
+                  onChange={e => setTitulo(e.target.value)}
+                  placeholder="Ex: WOD Sábado"
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-gorila-yellow transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1.5 block">Data *</label>
+                <input
+                  type="date"
+                  value={data}
+                  onChange={e => setData(e.target.value)}
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gorila-yellow transition-colors [color-scheme:dark]"
+                />
               </div>
             </div>
-            <div className="flex gap-2 pt-1">
-              <Button variant="outline" className="flex-1" onClick={() => { setModalOpen(false); resetModal() }}>Cancelar</Button>
-              <Button disabled={saving} onClick={handleSalvar} className="flex-1 bg-gorila-yellow text-gorila-primary hover:bg-yellow-300 font-bold">
-                {saving ? <Loader2 size={14} className="animate-spin mr-1" /> : <Plus size={14} className="mr-1" />} Salvar
-              </Button>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-1.5 block">Observações</label>
+              <textarea
+                value={descricao}
+                onChange={e => setDescricao(e.target.value)}
+                placeholder="Instruções, local, equipamentos…"
+                rows={2}
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-gorila-yellow transition-colors resize-none"
+              />
+            </div>
+
+            {/* Athlete picker */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                  Atletas
+                </label>
+                {selecionados.length > 0 && (
+                  <span className="text-[10px] font-bold text-gorila-yellow tabular-nums">
+                    {selecionados.length} selecionado{selecionados.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+              {atletas.length === 0 ? (
+                <p className="text-xs text-zinc-600 py-4 text-center">Nenhum atleta vinculado a você ainda.</p>
+              ) : (
+                <div className="space-y-1.5 max-h-56 overflow-y-auto -mx-1 px-1">
+                  {atletas.map(a => {
+                    const sel = selecionados.find(s => s.atletaId === a.id)
+                    return (
+                      <div key={a.id}
+                        className={`flex items-center gap-2 rounded-lg border transition-all ${
+                          sel
+                            ? 'border-l-2 border-gorila-yellow bg-gorila-yellow/[0.08]'
+                            : 'border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/40'
+                        }`}>
+                        {/* Avatar */}
+                        <button
+                          type="button"
+                          onClick={() => toggleAtleta(a.id)}
+                          className="flex items-center gap-2.5 flex-1 px-3 py-2.5 text-left">
+                          <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 transition-colors ${
+                            sel ? 'bg-gorila-yellow text-gorila-primary' : 'bg-zinc-800 text-zinc-400'
+                          }`}>
+                            {sel ? <Check size={12} strokeWidth={3} /> : inicialAtleta(a.nome)}
+                          </span>
+                          <span className={`text-sm font-medium transition-colors ${sel ? 'text-gorila-yellow' : 'text-zinc-300'}`}>
+                            {a.nome}
+                          </span>
+                        </button>
+
+                        {/* Position input — only when selected */}
+                        {sel && (
+                          <input
+                            value={sel.posicao}
+                            onChange={e => setPosicao(a.id, e.target.value)}
+                            placeholder="posição"
+                            className="w-24 mr-3 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs font-mono text-gorila-yellow placeholder-zinc-600 focus:outline-none focus:border-gorila-yellow"
+                          />
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={() => { setModalOpen(false); resetModal() }}
+                className="flex-1 py-2.5 rounded-lg border border-zinc-700 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors font-medium">
+                Cancelar
+              </button>
+              <button
+                disabled={saving}
+                onClick={handleSalvar}
+                className="flex-1 py-2.5 rounded-lg bg-gorila-yellow text-gorila-primary font-black text-sm hover:bg-yellow-300 active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50">
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={3} />}
+                Salvar escalação
+              </button>
             </div>
           </div>
         </DialogContent>
@@ -1272,7 +1529,7 @@ export default function PainelProfessor() {
 
   const { data: atletas = [] } = useQuery<Atleta[]>({
     queryKey: ['professor-atletas'],
-    queryFn: () => api.get('/professor/atletas'),
+    queryFn: () => api.get('/professor/atletas?meus=true'),
     enabled: !!user,
   })
 
@@ -1480,22 +1737,34 @@ export default function PainelProfessor() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {atletas.map(a => (
-                        <div key={a.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-gorila-primary/30 transition-colors">
-                          <div className="w-9 h-9 rounded-full bg-gorila-yellow/20 flex items-center justify-center font-bold text-gorila-primary text-sm shrink-0">
-                            {iniciais(a.nome)}
+                      {atletas.map(a => {
+                        const ativas = a.matriculas?.filter(m => m.status === 'ATIVA') ?? []
+                        return (
+                          <div key={a.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-gorila-primary/30 transition-colors">
+                            <div className="w-9 h-9 rounded-full bg-gorila-yellow/20 flex items-center justify-center font-bold text-gorila-primary text-sm shrink-0">
+                              {iniciais(a.nome)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{a.nome}</p>
+                              <p className="text-xs text-gray-400 truncate">{a.email}</p>
+                              {ativas.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {ativas.map((m, i) => (
+                                    <span key={i} className="text-[10px] bg-gorila-yellow/15 text-gorila-primary font-semibold px-1.5 py-0.5 rounded">
+                                      {m.modalidade?.nome ?? '—'}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                              ativas.length > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                            }`}>
+                              {ativas.length > 0 ? 'Ativo' : 'Pendente'}
+                            </span>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{a.nome}</p>
-                            <p className="text-xs text-gray-400 truncate">{a.email}</p>
-                          </div>
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            a.matriculas?.some(m => m.status === 'ATIVA') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                          }`}>
-                            {a.matriculas?.some(m => m.status === 'ATIVA') ? 'Matriculado' : 'Pendente'}
-                          </span>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </CardContent>
@@ -1507,7 +1776,7 @@ export default function PainelProfessor() {
             {tab === 'minhas-turmas' && <TabTurmasProfessor />}
             {tab === 'anamneses'  && <TabAnamneses />}
             {tab === 'desempenho' && <TabDesempenho atletas={atletas} />}
-            {tab === 'dieta'      && <DietPrescription userName={user.nome} />}
+            {tab === 'dieta'      && <DietTab atletas={atletas} />}
 
             {tab === 'escalacao' && <TabEscalacao atletas={atletas} />}
           </div>

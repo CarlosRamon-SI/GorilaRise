@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { api } from '@/lib/api'
 import {
   LayoutDashboard,
   Users,
@@ -88,7 +89,7 @@ const NAV_GROUPS = [
   },
 ]
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({ onNavigate, pendingUsers }: { onNavigate?: () => void; pendingUsers: number }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
@@ -121,31 +122,39 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               {group.label}
             </p>
             <div className="space-y-0.5">
-              {group.items.map(({ to, label, icon: Icon, end }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={end}
-                  onClick={onNavigate}
-                  className={({ isActive }) =>
-                    `group flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-150 ${
-                      isActive
-                        ? 'bg-gorila-yellow/10 text-gorila-yellow border border-gorila-yellow/20'
-                        : 'text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-100 border border-transparent'
-                    }`
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <Icon size={15} className={`shrink-0 transition-transform duration-150 ${isActive ? '' : 'group-hover:scale-105'}`} />
-                      <span className="flex-1">{label}</span>
-                      {isActive && (
-                        <span className="w-1 h-1 rounded-full bg-gorila-yellow shrink-0" />
-                      )}
-                    </>
-                  )}
-                </NavLink>
-              ))}
+              {group.items.map(({ to, label, icon: Icon, end }) => {
+                const showBadge = label === 'Usuários' && pendingUsers > 0
+                return (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={end}
+                    onClick={onNavigate}
+                    className={({ isActive }) =>
+                      `group flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-150 ${
+                        isActive
+                          ? 'bg-gorila-yellow/10 text-gorila-yellow border border-gorila-yellow/20'
+                          : 'text-zinc-400 hover:bg-zinc-800/70 hover:text-zinc-100 border border-transparent'
+                      }`
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <Icon size={15} className={`shrink-0 transition-transform duration-150 ${isActive ? '' : 'group-hover:scale-105'}`} />
+                        <span className="flex-1">{label}</span>
+                        {showBadge && (
+                          <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-zinc-900 text-[10px] font-black flex items-center justify-center shrink-0">
+                            {pendingUsers > 99 ? '99+' : pendingUsers}
+                          </span>
+                        )}
+                        {!showBadge && isActive && (
+                          <span className="w-1 h-1 rounded-full bg-gorila-yellow shrink-0" />
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                )
+              })}
             </div>
           </div>
         ))}
@@ -180,6 +189,8 @@ export default function AdminLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [pendingUsers, setPendingUsers] = useState(0)
+  const fetchedRef = useRef(false)
 
   useEffect(() => {
     if (loading) return
@@ -189,6 +200,12 @@ export default function AdminLayout() {
     }
     if (user?.role === 'ATLETA') navigate('/painel', { replace: true })
     if (user?.role === 'SOCIO_TORCEDOR') navigate('/painel-socio', { replace: true })
+    if (!fetchedRef.current && (user?.role === 'ADMIN' || user?.role === 'TREINADOR')) {
+      fetchedRef.current = true
+      api.get<{ usuariosPendentes?: number }>('/admin/stats')
+        .then(s => setPendingUsers(s.usuariosPendentes ?? 0))
+        .catch(() => {})
+    }
   }, [loading, isLoggedIn, user, navigate])
 
   // Close mobile drawer on route change
@@ -242,13 +259,13 @@ export default function AdminLayout() {
         >
           <X size={15} />
         </button>
-        <SidebarContent onNavigate={() => setSidebarOpen(false)} />
+        <SidebarContent onNavigate={() => setSidebarOpen(false)} pendingUsers={pendingUsers} />
       </div>
 
       {/* ── Desktop sidebar (always visible on lg+) ────────────────────── */}
       <aside className="hidden lg:flex w-64 flex-shrink-0 bg-zinc-900 border-r border-zinc-800 flex-col relative">
         <div className="absolute inset-y-0 left-0 w-0.5 bg-gorila-yellow opacity-60" />
-        <SidebarContent />
+        <SidebarContent pendingUsers={pendingUsers} />
       </aside>
 
       {/* ── Main content ───────────────────────────────────────────────── */}

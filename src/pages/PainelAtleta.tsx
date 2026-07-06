@@ -18,7 +18,7 @@ import {
   LayoutDashboard, User, CreditCard, Dumbbell, Clock, FileText,
   CheckCircle, Trophy, Camera, LogOut, ChevronRight,
   CalendarDays, ShieldCheck, Mail, Layers, Target, Calendar,
-  Upload, Activity, Zap, Bell, Gift
+  Upload, Activity, Zap, Bell, Gift, Video, ExternalLink
 } from 'lucide-react'
 
 interface Perfil {
@@ -45,8 +45,11 @@ interface RecordeResumido {
   id: number; exercicio: string; carga: string; data: string
 }
 
+interface VideoTreino { id: number; titulo: string; url: string; descricao?: string | null }
+
 interface TreinoPrescrito {
-  id: number; atletaNome: string; titulo: string; exercicios: string | null; criadoEm: string
+  id: number; atletaNome: string; titulo: string; descricao?: string | null
+  exercicios: string | null; criadoEm: string; videos?: VideoTreino[]
 }
 
 interface WOD {
@@ -130,8 +133,12 @@ function FichaTreinoTab() {
                 <Dumbbell size={17} /> {ficha.titulo}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-xs text-gray-400 mb-4">Prescrito para: {ficha.atletaNome}</p>
+            <CardContent className="space-y-4">
+              {ficha.descricao && (
+                <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 leading-relaxed">
+                  {ficha.descricao}
+                </p>
+              )}
               {exercicios.length > 0 ? (
                 <div className="space-y-2">
                   {exercicios.map((ex, i) => (
@@ -145,9 +152,32 @@ function FichaTreinoTab() {
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) : ficha.exercicios ? (
                 <p className="text-sm text-gray-500 whitespace-pre-line">{ficha.exercicios}</p>
+              ) : null}
+              {ficha.videos && ficha.videos.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Video size={12} /> Vídeos de referência
+                  </p>
+                  <div className="space-y-2">
+                    {ficha.videos.map(v => (
+                      <a key={v.id} href={v.url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-2.5 bg-gorila-primary/5 border border-gorila-primary/10 rounded-lg hover:bg-gorila-primary/10 transition-colors group">
+                        <div className="w-8 h-8 rounded-lg bg-gorila-primary/10 flex items-center justify-center shrink-0">
+                          <Video size={14} className="text-gorila-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gorila-primary truncate">{v.titulo}</p>
+                          {v.descricao && <p className="text-xs text-gray-400 truncate">{v.descricao}</p>}
+                        </div>
+                        <ExternalLink size={12} className="text-gorila-primary/40 group-hover:text-gorila-primary shrink-0 transition-colors" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
               )}
+              <p className="text-xs text-gray-400">Prescrito para: {ficha.atletaNome}</p>
             </CardContent>
           </Card>
         )
@@ -214,6 +244,21 @@ export default function PainelAtleta() {
     retry: false,
   })
 
+  const matriculaAtiva = !isLoading ? perfil?.matriculas?.find(m => m.status === 'ATIVA') : undefined
+
+  const { data: anamneseCheck } = useQuery<{ id: number } | null>({
+    queryKey: ['anamnese-check'],
+    queryFn: async () => {
+      try { return await api.get<{ id: number }>('/anamnese') }
+      catch { return null }
+    },
+    enabled: !!user && !isLoading && !!matriculaAtiva,
+    retry: false,
+    staleTime: 10 * 60_000,
+  })
+
+  const anamnesePendente = !isLoading && !!matriculaAtiva && anamneseCheck === null
+
   const checkinHoje = turmasData.filter(t => t.checkedIn)
   const ultimoRecorde = recordesData[0] ?? null
   const fichaAtual = fichaData?.[0] ?? null
@@ -254,8 +299,6 @@ export default function PainelAtleta() {
   }, [user, authLoading, navigate])
 
   if (!user) return null
-
-  const matriculaAtiva = !isLoading ? perfil?.matriculas?.find(m => m.status === 'ATIVA') : undefined
 
   return (
     <div className="min-h-screen bg-[#f4f4f4]">
@@ -310,7 +353,12 @@ export default function PainelAtleta() {
                     : 'text-white/50 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <item.icon size={15} className="shrink-0" />
+                <div className="relative">
+                  <item.icon size={15} className="shrink-0" />
+                  {item.id === 'anamnese' && anamnesePendente && (
+                    <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-amber-400 border border-gorila-primary" />
+                  )}
+                </div>
                 <span className="text-[9px] font-bold whitespace-nowrap leading-tight">{item.short}</span>
               </button>
             ))}
@@ -340,6 +388,9 @@ export default function PainelAtleta() {
                   >
                     <item.icon size={14} className="shrink-0" />
                     <span className="flex-1 text-left">{item.label}</span>
+                    {item.id === 'anamnese' && anamnesePendente && (
+                      <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                    )}
                     {tab === item.id && <ChevronRight size={12} className="opacity-60 shrink-0" />}
                   </button>
                 ))}
@@ -362,6 +413,22 @@ export default function PainelAtleta() {
             {/* Dashboard */}
             {tab === 'dashboard' && (
               <div className="space-y-4 animate-fade-in">
+                {/* Banner: anamnese pendente */}
+                {anamnesePendente && (
+                  <button
+                    onClick={() => setTab('anamnese')}
+                    className="flex items-center gap-3 w-full bg-amber-50 border border-amber-300 rounded-xl px-4 py-3.5 hover:bg-amber-100 transition-colors text-left group"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-amber-400/20 flex items-center justify-center shrink-0">
+                      <FileText size={16} className="text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gorila-primary leading-tight">Preencha sua ficha de anamnese</p>
+                      <p className="text-xs text-amber-700/70 mt-0.5">Necessária para seu acompanhamento e segurança nos treinos</p>
+                    </div>
+                    <ChevronRight size={15} className="text-amber-400 group-hover:text-amber-600 transition-colors shrink-0" />
+                  </button>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Check-in — card destaque */}
                   <div className="bg-gorila-primary rounded-xl p-5 shadow-sm">
@@ -683,7 +750,7 @@ export default function PainelAtleta() {
                 Esta funcionalidade requer uma matrícula ativa. Fale com a administração do clube.
               </div>
             )}
-            {tab === 'anamnese'       && !!matriculaAtiva && <TabAnamnese />}
+            {tab === 'anamnese'       && !!matriculaAtiva && <TabAnamnese onSaved={() => queryClient.invalidateQueries({ queryKey: ['anamnese-check'] })} />}
             {tab === 'checkin'        && !!matriculaAtiva && <TabCheckin />}
             {tab === 'recordes'       && !!matriculaAtiva && <TabRecordes />}
             {tab === 'prontuario'     && !!matriculaAtiva && <TabProntuario />}

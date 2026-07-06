@@ -44,6 +44,7 @@ interface Configuracoes {
   emailPlanoVencendo: boolean
   emailPlanoVencido: boolean
   exibirCategoriasPatrocinadores: boolean
+  permitirAlteracaoFotos: boolean
 }
 
 const DIAS = [
@@ -67,6 +68,7 @@ const emptyConfig = (): Configuracoes => ({
   emailBoasVindas: true, emailUsuarioAtivado: true, emailMatriculaAtivada: true,
   emailMatriculaCancelada: true, emailPagamentoConfirmado: true, emailPlanoVencendo: true, emailPlanoVencido: false,
   exibirCategoriasPatrocinadores: false,
+  permitirAlteracaoFotos: true,
 })
 
 function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
@@ -433,6 +435,25 @@ export default function Configuracoes() {
           <div>
             <p className={`text-sm font-medium ${config.exibirCategoriasPatrocinadores ? 'text-white' : 'text-zinc-500'}`}>Exibir categorias de patrocinadores</p>
             <p className="text-xs text-zinc-600">Mostra os rótulos Platina, Ouro, Prata e Bronze na home e na página institucional</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Controles de Atletas */}
+      <section className="bg-zinc-900 rounded-xl p-6 border border-zinc-800">
+        <SectionTitle icon={Building2} title="Controles de Atletas" />
+        <p className="text-xs text-zinc-500 mb-4">Configure o que os atletas podem fazer dentro do painel deles.</p>
+        <div className="flex items-start gap-3 p-3 bg-zinc-800/60 rounded-lg border border-zinc-700/50 max-w-sm">
+          <button
+            type="button"
+            onClick={() => set('permitirAlteracaoFotos', !config.permitirAlteracaoFotos)}
+            className={`mt-0.5 w-9 h-5 rounded-full flex-shrink-0 transition-colors relative ${config.permitirAlteracaoFotos ? 'bg-yellow-400' : 'bg-zinc-700'}`}
+          >
+            <span className={`absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.permitirAlteracaoFotos ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
+          </button>
+          <div>
+            <p className={`text-sm font-medium ${config.permitirAlteracaoFotos ? 'text-white' : 'text-zinc-500'}`}>Permitir envio de fotos de progresso</p>
+            <p className="text-xs text-zinc-600">Quando desativado, atletas não podem enviar novas fotos de progresso</p>
           </div>
         </div>
       </section>

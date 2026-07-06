@@ -1,232 +1,148 @@
+import { Play, Pause, RotateCcw, Plus, Trash2 } from 'lucide-react'
+import { useAdvancedIntervalTimer, IntervalConfig } from '@/hooks/useAdvancedIntervalTimer'
+import { formatTime } from '@/utils/timeFormatter'
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Play, Pause, RotateCcw, Plus, Trash2 } from 'lucide-react';
-import { useAdvancedIntervalTimer, IntervalConfig } from '@/hooks/useAdvancedIntervalTimer';
-import { formatTime } from '@/utils/timeFormatter';
+const R = 88
+const CIRC = 2 * Math.PI * R
 
-const AdvancedIntervalTimer = () => {
+export default function AdvancedIntervalTimer() {
   const {
-    intervalos,
-    rounds,
-    currentTime,
-    isRunning,
-    currentPhase,
-    currentRound,
-    currentInterval,
-    setRounds,
-    start,
-    pause,
-    reset,
-    addInterval,
-    removeInterval,
-    updateInterval
-  } = useAdvancedIntervalTimer();
+    intervalos, rounds, currentTime, isRunning,
+    currentPhase, currentRound, currentInterval,
+    setRounds, start, pause, reset,
+    addInterval, removeInterval, updateInterval,
+  } = useAdvancedIntervalTimer()
 
-  const getPhaseDisplay = () => {
-    switch (currentPhase) {
-      case 'start':
-        return 'PREPARAR';
-      case 'tempoA':
-        return `TEMPO A - Intervalo ${currentInterval + 1}`;
-      case 'tempoB':
-        return `TEMPO B - Intervalo ${currentInterval + 1}`;
-      default:
-        return 'PREPARAR';
-    }
-  };
+  const isRest = currentPhase === 'tempoB'
+  const accentColor = isRest ? '#60a5fa' : '#f0c419'
+  const phaseLabel = currentPhase === 'start'
+    ? 'preparar'
+    : isRest
+      ? `descanso · série ${currentInterval + 1}`
+      : `trabalho · série ${currentInterval + 1}`
 
-  const getPhaseColor = () => {
-    switch (currentPhase) {
-      case 'start':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'tempoA':
-        return 'bg-green-100 text-green-800';
-      case 'tempoB':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const current = intervalos[currentInterval]
+  const phaseTotal = currentPhase === 'start'
+    ? 10
+    : current
+      ? (isRest ? current.tempoB.minutos : current.tempoA.minutos) * 60
+        + (isRest ? current.tempoB.segundos : current.tempoA.segundos)
+      : 0
+  const progress = phaseTotal > 0 ? currentTime / phaseTotal : 0
+  const dashoffset = CIRC * (1 - progress)
 
-  const updateIntervalTime = (id: string, type: 'tempoA' | 'tempoB', field: 'minutos' | 'segundos', value: number) => {
-    const interval = intervalos.find(i => i.id === id);
-    if (interval) {
-      const updatedTime = { ...interval[type], [field]: value };
-      updateInterval(id, { [type]: updatedTime });
-    }
-  };
+  function updTime(id: string, phase: 'tempoA' | 'tempoB', field: 'minutos' | 'segundos', val: number) {
+    const iv = intervalos.find(i => i.id === id)
+    if (iv) updateInterval(id, { [phase]: { ...iv[phase], [field]: val } })
+  }
 
   return (
-    <div className="text-center space-y-6">
-      {/* Display do Timer */}
-      <div className="space-y-4">
-        <div className={`inline-block px-4 py-2 rounded-lg font-semibold ${getPhaseColor()}`}>
-          {getPhaseDisplay()}
-        </div>
-        <div className="text-6xl font-mono font-bold text-gorila-primary">
-          {formatTime(currentTime)}
-        </div>
-        <div className="text-lg text-gray-600">
-          Round {currentRound} de {rounds}
+    <div className="flex flex-col items-center gap-6 py-2">
+      {/* Ring + Digits */}
+      <div className="relative w-52 h-52 flex items-center justify-center">
+        <svg className="absolute inset-0 -rotate-90" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="8" />
+          <circle
+            cx="100" cy="100" r={R} fill="none"
+            stroke={accentColor} strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={CIRC}
+            strokeDashoffset={dashoffset}
+            style={{ transition: isRunning ? 'stroke-dashoffset 0.25s linear' : 'none' }}
+          />
+        </svg>
+        <div className="text-center z-10 select-none">
+          <div className="text-5xl font-black font-mono tabular-nums text-white tracking-tight leading-none">
+            {formatTime(currentTime)}
+          </div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] mt-1.5" style={{ color: accentColor + 'aa' }}>
+            {phaseLabel}
+          </div>
+          <div className="text-[10px] text-white/25 mt-0.5">
+            round {currentRound}/{rounds}
+          </div>
         </div>
       </div>
 
-      {/* Configurações */}
-      <div className="max-w-4xl mx-auto space-y-4">
-        {/* Rounds */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Configurações Gerais</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="max-w-xs mx-auto">
-              <Label htmlFor="rounds" className="text-sm font-semibold">Rounds</Label>
-              <Input
-                id="rounds"
-                type="number"
-                value={rounds}
-                onChange={(e) => setRounds(Number(e.target.value))}
-                disabled={isRunning}
-                min="1"
-                max="20"
-                className="text-center"
-              />
+      {/* Controls */}
+      <div className="flex items-center gap-4">
+        <button onClick={reset}
+          className="w-11 h-11 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/50 hover:text-white transition-all">
+          <RotateCcw size={15} />
+        </button>
+        <button
+          onClick={isRunning ? pause : start}
+          className="w-16 h-16 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-lg"
+          style={{ backgroundColor: accentColor, color: '#231f20', boxShadow: `0 8px 24px ${accentColor}33` }}>
+          {isRunning ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" className="ml-0.5" />}
+        </button>
+        <div className="w-11 h-11" />
+      </div>
+
+      {/* Config */}
+      {!isRunning && (
+        <div className="w-full max-w-sm space-y-3">
+          {/* Rounds */}
+          <div className="flex items-center justify-between bg-white/5 border border-white/8 rounded-xl px-4 py-3">
+            <span className="text-xs uppercase tracking-widest text-white/40">Rounds</span>
+            <input
+              type="number" min={1} max={20} value={rounds}
+              onChange={e => setRounds(Number(e.target.value))}
+              className="w-14 bg-white/5 border border-white/10 rounded-lg text-center text-sm font-mono font-bold text-white py-1 focus:outline-none focus:ring-1 focus:ring-gorila-yellow"
+            />
+          </div>
+
+          {/* Intervalos */}
+          {intervalos.map((iv, idx) => (
+            <div key={iv.id} className="bg-white/5 border border-white/8 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">Série {idx + 1}</span>
+                {intervalos.length > 1 && (
+                  <button onClick={() => removeInterval(iv.id)} className="text-white/25 hover:text-red-400 transition-colors">
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {(['tempoA', 'tempoB'] as const).map(phase => (
+                  <div key={phase}>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: phase === 'tempoA' ? '#f0c419' : '#60a5fa' }} />
+                      <span className="text-[10px] uppercase tracking-widest" style={{ color: phase === 'tempoA' ? '#f0c41999' : '#60a5fa99' }}>
+                        {phase === 'tempoA' ? 'trabalho' : 'descanso'}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      <div className="flex flex-col items-center gap-0.5 flex-1">
+                        <span className="text-[8px] text-white/25 uppercase">min</span>
+                        <input
+                          type="number" min={0} max={59} value={iv[phase].minutos}
+                          onChange={e => updTime(iv.id, phase, 'minutos', Number(e.target.value))}
+                          className="w-full bg-white/5 border border-white/10 rounded text-center text-sm font-mono font-bold text-white py-1 focus:outline-none focus:ring-1 focus:ring-gorila-yellow"
+                        />
+                      </div>
+                      <span className="text-white/20 text-lg font-mono self-end mb-0.5">:</span>
+                      <div className="flex flex-col items-center gap-0.5 flex-1">
+                        <span className="text-[8px] text-white/25 uppercase">seg</span>
+                        <input
+                          type="number" min={0} max={59} value={iv[phase].segundos}
+                          onChange={e => updTime(iv.id, phase, 'segundos', Number(e.target.value))}
+                          className="w-full bg-white/5 border border-white/10 rounded text-center text-sm font-mono font-bold text-white py-1 focus:outline-none focus:ring-1 focus:ring-gorila-yellow"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Intervalos */}
-        <div className="space-y-4">
-          {intervalos.map((intervalo, index) => (
-            <Card key={intervalo.id} className="relative">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Intervalo {index + 1}</CardTitle>
-                  {intervalos.length > 1 && (
-                    <Button
-                      onClick={() => removeInterval(intervalo.id)}
-                      disabled={isRunning}
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Tempo A */}
-                  <div>
-                    <Label className="text-sm font-semibold text-green-800 mb-3 block">
-                      TEMPO A (Treino)
-                    </Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-xs">Minutos</Label>
-                        <Input
-                          type="number"
-                          value={intervalo.tempoA.minutos}
-                          onChange={(e) => updateIntervalTime(intervalo.id, 'tempoA', 'minutos', Number(e.target.value))}
-                          disabled={isRunning}
-                          min="0"
-                          max="59"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Segundos</Label>
-                        <Input
-                          type="number"
-                          value={intervalo.tempoA.segundos}
-                          onChange={(e) => updateIntervalTime(intervalo.id, 'tempoA', 'segundos', Number(e.target.value))}
-                          disabled={isRunning}
-                          min="0"
-                          max="59"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tempo B */}
-                  <div>
-                    <Label className="text-sm font-semibold text-blue-800 mb-3 block">
-                      TEMPO B (Descanso)
-                    </Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-xs">Minutos</Label>
-                        <Input
-                          type="number"
-                          value={intervalo.tempoB.minutos}
-                          onChange={(e) => updateIntervalTime(intervalo.id, 'tempoB', 'minutos', Number(e.target.value))}
-                          disabled={isRunning}
-                          min="0"
-                          max="59"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Segundos</Label>
-                        <Input
-                          type="number"
-                          value={intervalo.tempoB.segundos}
-                          onChange={(e) => updateIntervalTime(intervalo.id, 'tempoB', 'segundos', Number(e.target.value))}
-                          disabled={isRunning}
-                          min="0"
-                          max="59"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           ))}
+
+          <button onClick={addInterval}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-white/15 text-white/35 hover:border-white/25 hover:text-white/60 transition-all text-xs font-medium">
+            <Plus size={13} /> Adicionar série
+          </button>
         </div>
-
-        {/* Adicionar Intervalo */}
-        <Button
-          onClick={addInterval}
-          disabled={isRunning}
-          variant="outline"
-          className="w-full max-w-xs mx-auto block"
-        >
-          <Plus size={16} className="mr-2" />
-          Adicionar Intervalo
-        </Button>
-      </div>
-
-      {/* Controles */}
-      <div className="space-x-2">
-        <Button
-          onClick={start}
-          disabled={isRunning}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          <Play size={16} className="mr-2" />
-          Iniciar
-        </Button>
-        <Button
-          onClick={pause}
-          disabled={!isRunning}
-          variant="outline"
-        >
-          <Pause size={16} className="mr-2" />
-          Pausar
-        </Button>
-        <Button
-          onClick={reset}
-          variant="destructive"
-        >
-          <RotateCcw size={16} className="mr-2" />
-          Resetar
-        </Button>
-      </div>
+      )}
     </div>
-  );
-};
-
-export default AdvancedIntervalTimer;
+  )
+}

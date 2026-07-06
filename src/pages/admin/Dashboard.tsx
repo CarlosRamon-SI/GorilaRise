@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import {
   Users, ClipboardList, Layers, CreditCard, UserPlus, Heart,
-  FileText, Users2, Bell, Building2, ChevronRight, TrendingUp,
+  FileText, Users2, Bell, Building2, ChevronRight, TrendingUp, AlertTriangle,
 } from 'lucide-react'
 
 interface Stats {
@@ -17,6 +17,7 @@ interface Stats {
   funcionarios?: number
   notificacoes?: number
   patrocinadores?: number
+  usuariosPendentes?: number
 }
 
 const statCards = (s: Stats) => [
@@ -108,6 +109,25 @@ export default function Dashboard() {
         <div className="bg-red-900/30 border border-red-700 text-red-400 rounded-lg p-4 mb-6 text-sm">
           {error}
         </div>
+      )}
+
+      {stats && (stats.usuariosPendentes ?? 0) > 0 && (
+        <Link
+          to="/admin/usuarios"
+          className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/40 text-amber-300
+                     rounded-xl px-5 py-3.5 mb-6 hover:bg-amber-500/15 transition-colors group"
+        >
+          <AlertTriangle size={18} className="shrink-0 text-amber-400" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold leading-tight">
+              {stats.usuariosPendentes === 1
+                ? '1 usuário aguardando ativação'
+                : `${stats.usuariosPendentes} usuários aguardando ativação`}
+            </p>
+            <p className="text-xs text-amber-400/70 mt-0.5">Clique para gerenciar usuários</p>
+          </div>
+          <ChevronRight size={15} className="text-amber-400/50 group-hover:text-amber-300 transition-colors" />
+        </Link>
       )}
 
       {!stats && !error && (

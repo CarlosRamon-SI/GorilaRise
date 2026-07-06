@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Camera, Upload } from 'lucide-react'
+import { Camera, Upload, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Foto {
@@ -15,6 +15,7 @@ interface Foto {
 export default function TabFotos({ tipo }: { tipo: 'INICIAL' | 'PROGRESSO' }) {
   const [fotos, setFotos] = useState<Foto[]>([])
   const [uploading, setUploading] = useState(false)
+  const [uploadBloqueado, setUploadBloqueado] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -22,6 +23,16 @@ export default function TabFotos({ tipo }: { tipo: 'INICIAL' | 'PROGRESSO' }) {
       .then(setFotos)
       .catch(() => {})
   }, [tipo])
+
+  useEffect(() => {
+    if (tipo !== 'PROGRESSO') return
+    api.get<{ permitirAlteracaoFotos: boolean }>('/configuracoes')
+      .then(cfg => { if (cfg.permitirAlteracaoFotos === false) setUploadBloqueado(true) })
+      .catch(() => {})
+  }, [tipo])
+
+  // Bloqueia upload apenas se já existe foto (impede troca, mas permite o primeiro envio)
+  const bloqueioAtivo = uploadBloqueado && fotos.length > 0
 
   async function handleUpload(file: File) {
     setUploading(true)
@@ -54,10 +65,12 @@ export default function TabFotos({ tipo }: { tipo: 'INICIAL' | 'PROGRESSO' }) {
           <CardTitle className="text-gorila-primary flex items-center gap-2 text-base">
             <Camera size={17} /> {titulo}
           </CardTitle>
-          <Button size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}
-            className="bg-gorila-primary hover:bg-gorila-dark text-white text-xs gap-1.5">
-            <Upload size={13} /> {uploading ? 'Enviando...' : 'Enviar Foto'}
-          </Button>
+          {!bloqueioAtivo && (
+            <Button size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}
+              className="bg-gorila-primary hover:bg-gorila-dark text-white text-xs gap-1.5">
+              <Upload size={13} /> {uploading ? 'Enviando...' : 'Enviar Foto'}
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -65,6 +78,13 @@ export default function TabFotos({ tipo }: { tipo: 'INICIAL' | 'PROGRESSO' }) {
         <input ref={fileRef} type="file" className="hidden"
           accept=".jpg,.jpeg,.png,.webp"
           onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f) }} />
+
+        {bloqueioAtivo && (
+          <div className="flex items-center gap-2 mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-xs">
+            <Lock size={14} className="flex-shrink-0" />
+            A alteração de fotos está desativada pelo seu clube. Entre em contato com seu treinador.
+          </div>
+        )}
 
         {fotos.length === 0 ? (
           <div

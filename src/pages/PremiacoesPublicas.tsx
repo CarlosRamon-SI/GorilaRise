@@ -10,10 +10,8 @@ interface Premiacao {
   descricao: string
   atletaNome: string
   data: string
-  imagemUrl?: string
+  imagemUrl?: string | null
 }
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'https://pressticket.adtecnologia.com.br'
 
 export default function PremiacoesPublicas() {
   const [items, setItems] = useState<Premiacao[]>([])
@@ -58,7 +56,7 @@ export default function PremiacoesPublicas() {
               {items.map(p => (
                 <div key={p.id} className="rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
                   {p.imagemUrl && (
-                    <img src={`${BASE_URL}${p.imagemUrl}`} alt={p.titulo}
+                    <img src={p.imagemUrl} alt={p.titulo}
                       className="w-full h-48 object-cover"
                       onError={e => (e.currentTarget.style.display = 'none')} />
                   )}
@@ -68,7 +66,11 @@ export default function PremiacoesPublicas() {
                       <h3 className="font-bold text-gorila-primary">{p.titulo}</h3>
                     </div>
                     {p.atletaNome && <p className="text-sm text-gray-600 mb-1 font-medium">{p.atletaNome}</p>}
-                    {p.data && <p className="text-xs text-gray-400 mb-3">{new Date(p.data).toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' })}</p>}
+                    {p.data && (
+                      <p className="text-xs text-gray-400 mb-3">
+                        {new Date(p.data + 'T12:00:00').toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' })}
+                      </p>
+                    )}
                     {p.descricao && <p className="text-sm text-gray-500 leading-relaxed">{p.descricao}</p>}
                   </div>
                 </div>

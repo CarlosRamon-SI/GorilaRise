@@ -1,43 +1,41 @@
+import { useState } from 'react'
+import Stopwatch from './Stopwatch'
+import CountdownTimer from './CountdownTimer'
+import AdvancedIntervalTimer from './AdvancedIntervalTimer'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import Stopwatch from './Stopwatch';
-import CountdownTimer from './CountdownTimer';
-import AdvancedIntervalTimer from './AdvancedIntervalTimer';
-import GorilaRiseLogo from './GorilaRiseLogo';
+const TABS = [
+  { id: 'stopwatch', label: 'Cronômetro' },
+  { id: 'countdown', label: 'Regressivo' },
+  { id: 'interval',  label: 'Intervalado' },
+] as const
 
-const TimerSystem = () => {
+type Tab = typeof TABS[number]['id']
+
+export default function TimerSystem() {
+  const [active, setActive] = useState<Tab>('stopwatch')
+
   return (
-    <Card className="w-full">
-      <CardHeader className="text-center">
-        <div className="flex flex-col items-center space-y-4">
-          <GorilaRiseLogo size="lg" />
-          <CardTitle className="text-gorila-primary">Sistema de Cronometragem</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="stopwatch" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="stopwatch">Cronômetro</TabsTrigger>
-            <TabsTrigger value="countdown">Regressivo</TabsTrigger>
-            <TabsTrigger value="interval">Intervalo</TabsTrigger>
-          </TabsList>
+    <div className="bg-[#0f0e0f] rounded-2xl overflow-hidden border border-white/[0.06]">
+      {/* Tab bar */}
+      <div className="flex border-b border-white/[0.06] px-4 pt-4 gap-1">
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setActive(t.id)}
+            className={`px-4 py-2 rounded-t-lg text-xs font-bold uppercase tracking-widest transition-all ${
+              active === t.id
+                ? 'bg-gorila-yellow text-gorila-primary'
+                : 'text-white/30 hover:text-white/60'
+            }`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-          <TabsContent value="stopwatch" className="space-y-4">
-            <Stopwatch />
-          </TabsContent>
-
-          <TabsContent value="countdown" className="space-y-4">
-            <CountdownTimer />
-          </TabsContent>
-
-          <TabsContent value="interval" className="space-y-4">
-            <AdvancedIntervalTimer />
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
-  );
-};
-
-export default TimerSystem;
+      {/* Panel */}
+      <div className="px-4 py-8">
+        {active === 'stopwatch' && <Stopwatch />}
+        {active === 'countdown' && <CountdownTimer />}
+        {active === 'interval'  && <AdvancedIntervalTimer />}
+      </div>
+    </div>
+  )
+}

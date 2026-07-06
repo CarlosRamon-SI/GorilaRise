@@ -91,7 +91,7 @@ function Select({ label, value, onChange, options, required }: {
   )
 }
 
-export default function TabAnamnese() {
+export default function TabAnamnese({ onSaved }: { onSaved?: () => void } = {}) {
   const [saved, setSaved] = useState<AnamneseData | null>(null)
   const [form, setForm] = useState<AnamneseData>(blank())
   const [step, setStep] = useState(1)
@@ -121,6 +121,7 @@ export default function TabAnamnese() {
     try {
       const result = await api.post<AnamneseData>('/anamnese', form)
       setSaved(result)
+      onSaved?.()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao salvar'
       setError(msg)

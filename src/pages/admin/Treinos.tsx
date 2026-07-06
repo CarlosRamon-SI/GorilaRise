@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { Dumbbell, Plus, Trash2, X, Check, Zap } from 'lucide-react'
+import { Dumbbell, Plus, Trash2, X, Check, Zap, Video, Link, ExternalLink } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface WOD {
   id: number
@@ -11,41 +12,69 @@ interface WOD {
   autorNome: string | null
 }
 
+interface VideoTreino {
+  id: number
+  titulo: string
+  url: string
+  descricao?: string | null
+  criadoEm: string
+}
+
 interface TreinoPrescrito {
   id: number
   atletaId: number | null
   atletaNome: string
   titulo: string
+  descricao?: string | null
   exercicios: string
   criadoEm: string
+  videos: VideoTreino[]
 }
 
-interface Atleta {
-  id: number
-  nome: string
-}
+interface Atleta { id: number; nome: string }
 
 const blankWOD = () => ({ titulo: '', descricao: '', data: new Date().toISOString().slice(0, 10), exercicios: '' })
-const blankTreino = () => ({ atletaId: '', titulo: '', exercicios: '' })
+const blankTreino = () => ({ atletaId: '', titulo: '', descricao: '', exercicios: '', videoIds: [] as number[] })
+const blankVideo = () => ({ titulo: '', url: '', descricao: '' })
+
+function ytThumb(url: string) {
+  try {
+    const u = new URL(url)
+    if (u.hostname.includes('youtube.com')) {
+      const id = u.searchParams.get('v')
+      if (id) return `https://img.youtube.com/vi/${id}/mqdefault.jpg`
+    }
+    if (u.hostname === 'youtu.be') {
+      const id = u.pathname.slice(1)
+      if (id) return `https://img.youtube.com/vi/${id}/mqdefault.jpg`
+    }
+  } catch { /* noop */ }
+  return null
+}
 
 export default function Treinos() {
   const [wods, setWods] = useState<WOD[]>([])
   const [treinos, setTreinos] = useState<TreinoPrescrito[]>([])
   const [atletas, setAtletas] = useState<Atleta[]>([])
+  const [videos, setVideos] = useState<VideoTreino[]>([])
   const [loadingWod, setLoadingWod] = useState(true)
   const [loadingTreinos, setLoadingTreinos] = useState(true)
   const [showWodForm, setShowWodForm] = useState(false)
   const [showTreinoForm, setShowTreinoForm] = useState(false)
+  const [showVideoForm, setShowVideoForm] = useState(false)
   const [wodForm, setWodForm] = useState(blankWOD())
   const [treinoForm, setTreinoForm] = useState(blankTreino())
+  const [videoForm, setVideoForm] = useState(blankVideo())
   const [savingWod, setSavingWod] = useState(false)
   const [savingTreino, setSavingTreino] = useState(false)
+  const [savingVideo, setSavingVideo] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     api.get<WOD[]>('/treinos/wod').then(setWods).catch(() => {}).finally(() => setLoadingWod(false))
     api.get<TreinoPrescrito[]>('/treinos').then(setTreinos).catch(() => {}).finally(() => setLoadingTreinos(false))
     api.get<Atleta[]>('/admin/usuarios?role=ATLETA').then(setAtletas).catch(() => {})
+    api.get<VideoTreino[]>('/treinos/videos').then(setVideos).catch(() => {})
   }, [])
 
   async function saveWOD(e: React.FormEvent) {
@@ -65,7 +94,9 @@ export default function Treinos() {
       const novo = await api.post<TreinoPrescrito>('/treinos', {
         atletaId:   Number(treinoForm.atletaId),
         titulo:     treinoForm.titulo,
-        exercicios: treinoForm.exercicios,
+        descricao:  treinoForm.descricao || undefined,
+        exercicios: treinoForm.exercicios || undefined,
+        videoIds:   treinoForm.videoIds,
       })
       setTreinos(prev => [novo, ...prev])
       setTreinoForm(blankTreino()); setShowTreinoForm(false)
@@ -73,23 +104,50 @@ export default function Treinos() {
     finally { setSavingTreino(false) }
   }
 
+  async function saveVideo(e: React.FormEvent) {
+    e.preventDefault(); setSavingVideo(true); setError('')
+    try {
+      const novo = await api.post<VideoTreino>('/treinos/videos', videoForm)
+      setVideos(prev => [novo, ...prev])
+      setVideoForm(blankVideo()); setShowVideoForm(false)
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : 'Erro') }
+    finally { setSavingVideo(false) }
+  }
+
   async function deleteWOD(id: number) {
     if (!confirm('Remover WOD?')) return
-    await api.delete(`/treinos/wod/${id}`)
-    setWods(prev => prev.filter(w => w.id !== id))
+    try { await api.delete(`/treinos/wod/${id}`); setWods(prev => prev.filter(w => w.id !== id)) }
+    catch { toast.error('Erro ao remover WOD.') }
   }
 
   async function deleteTreino(id: number) {
-    if (!confirm('Remover treino?')) return
-    await api.delete(`/treinos/${id}`)
-    setTreinos(prev => prev.filter(t => t.id !== id))
+    if (!confirm('Remover ficha?')) return
+    try { await api.delete(`/treinos/${id}`); setTreinos(prev => prev.filter(t => t.id !== id)) }
+    catch { toast.error('Erro ao remover ficha.') }
   }
+
+  async function deleteVideo(id: number) {
+    if (!confirm('Remover vídeo da biblioteca?')) return
+    try {
+      await api.delete(`/treinos/videos/${id}`)
+      setVideos(prev => prev.filter(v => v.id !== id))
+    } catch { toast.error('Erro ao remover vídeo.') }
+  }
+
+  function toggleVideoId(id: number) {
+    setTreinoForm(p => ({
+      ...p,
+      videoIds: p.videoIds.includes(id) ? p.videoIds.filter(v => v !== id) : [...p.videoIds, id],
+    }))
+  }
+
+  const inputCls = 'w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400'
 
   return (
     <div className="p-8 space-y-10">
       <div>
         <h1 className="text-2xl font-bold">Treinos</h1>
-        <p className="text-zinc-400 text-sm mt-1">WOD diário e fichas individuais prescritas</p>
+        <p className="text-zinc-400 text-sm mt-1">WOD diário, fichas individuais e biblioteca de vídeos</p>
       </div>
 
       {/* WOD */}
@@ -111,26 +169,25 @@ export default function Treinos() {
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">Título <span className="text-red-400">*</span></label>
                 <input required value={wodForm.titulo} onChange={e => setWodForm(p => ({ ...p, titulo: e.target.value }))}
-                  placeholder="ex: AMRAP 20min"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                  placeholder="ex: AMRAP 20min" className={inputCls} />
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">Data</label>
                 <input type="date" value={wodForm.data} onChange={e => setWodForm(p => ({ ...p, data: e.target.value }))}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                  className={inputCls} />
               </div>
             </div>
             <div>
               <label className="block text-xs text-zinc-400 mb-1">Exercícios</label>
               <textarea value={wodForm.exercicios} onChange={e => setWodForm(p => ({ ...p, exercicios: e.target.value }))}
                 rows={3} placeholder="ex: 10 burpees, 15 squats, 20 push-ups..."
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none" />
+                className={`${inputCls} resize-none`} />
             </div>
             <div>
               <label className="block text-xs text-zinc-400 mb-1">Descrição</label>
               <textarea value={wodForm.descricao} onChange={e => setWodForm(p => ({ ...p, descricao: e.target.value }))}
                 rows={2} placeholder="Instruções adicionais..."
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none" />
+                className={`${inputCls} resize-none`} />
             </div>
             <div className="flex gap-2">
               <button type="submit" disabled={savingWod}
@@ -155,10 +212,8 @@ export default function Treinos() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <Zap size={14} className="text-yellow-400" />
                     <p className="font-semibold text-sm">{w.titulo}</p>
-                    <span className="text-xs text-zinc-500">{new Date(w.data).toLocaleDateString('pt-BR')}</span>
-                    {w.autorNome && (
-                      <span className="text-xs text-zinc-600">por {w.autorNome}</span>
-                    )}
+                    <span className="text-xs text-zinc-500">{new Date(w.data + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                    {w.autorNome && <span className="text-xs text-zinc-600">por {w.autorNome}</span>}
                   </div>
                   {w.exercicios && <p className="text-xs text-zinc-400 mt-1 font-mono">{w.exercicios}</p>}
                   {w.descricao && <p className="text-xs text-zinc-500 mt-1">{w.descricao}</p>}
@@ -166,6 +221,82 @@ export default function Treinos() {
                 <button onClick={() => deleteWOD(w.id)} className="text-zinc-600 hover:text-red-400 shrink-0"><Trash2 size={14} /></button>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* Biblioteca de Vídeos */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Video size={18} className="text-yellow-400" /> Biblioteca de Vídeos
+          </h2>
+          <button onClick={() => setShowVideoForm(v => !v)}
+            className="flex items-center gap-2 bg-zinc-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-zinc-600">
+            <Plus size={14} /> Adicionar Vídeo
+          </button>
+        </div>
+
+        {showVideoForm && (
+          <form onSubmit={saveVideo} className="bg-zinc-900 border border-zinc-700 rounded-xl p-5 mb-4 space-y-3">
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">Nome do vídeo <span className="text-red-400">*</span></label>
+                <input required value={videoForm.titulo} onChange={e => setVideoForm(p => ({ ...p, titulo: e.target.value }))}
+                  placeholder="ex: Agachamento — Técnica correta" className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">URL do vídeo <span className="text-red-400">*</span></label>
+                <input required type="url" value={videoForm.url} onChange={e => setVideoForm(p => ({ ...p, url: e.target.value }))}
+                  placeholder="https://youtube.com/watch?v=..." className={inputCls} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Observação (opcional)</label>
+              <input value={videoForm.descricao} onChange={e => setVideoForm(p => ({ ...p, descricao: e.target.value }))}
+                placeholder="Foco no tempo sob tensão..." className={inputCls} />
+            </div>
+            <div className="flex gap-2">
+              <button type="submit" disabled={savingVideo}
+                className="flex items-center gap-1.5 bg-yellow-400 text-zinc-900 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-yellow-300 disabled:opacity-50">
+                <Check size={13} /> {savingVideo ? 'Salvando...' : 'Salvar Vídeo'}
+              </button>
+              <button type="button" onClick={() => setShowVideoForm(false)}
+                className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:bg-zinc-800"><X size={13} /></button>
+            </div>
+          </form>
+        )}
+
+        {videos.length === 0 ? (
+          <div className="text-center py-8 text-zinc-600 text-sm bg-zinc-900 rounded-xl">
+            Nenhum vídeo na biblioteca. Adicione um para usar nas prescrições.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {videos.map(v => {
+              const thumb = ytThumb(v.url)
+              return (
+                <div key={v.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden flex gap-3 p-3 items-center">
+                  {thumb ? (
+                    <img src={thumb} alt="" className="w-20 h-12 object-cover rounded-lg shrink-0 bg-zinc-800" />
+                  ) : (
+                    <div className="w-20 h-12 bg-zinc-800 rounded-lg flex items-center justify-center shrink-0">
+                      <Link size={16} className="text-zinc-600" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{v.titulo}</p>
+                    {v.descricao && <p className="text-xs text-zinc-500 truncate">{v.descricao}</p>}
+                    <a href={v.url} target="_blank" rel="noopener noreferrer"
+                      className="text-[10px] text-yellow-400/70 hover:text-yellow-400 flex items-center gap-1 mt-0.5">
+                      <ExternalLink size={10} /> abrir link
+                    </a>
+                  </div>
+                  <button onClick={() => deleteVideo(v.id)} className="text-zinc-600 hover:text-red-400 shrink-0"><Trash2 size={13} /></button>
+                </div>
+              )
+            })}
           </div>
         )}
       </section>
@@ -190,26 +321,51 @@ export default function Treinos() {
                 <label className="block text-xs text-zinc-400 mb-1">Atleta <span className="text-red-400">*</span></label>
                 <select required value={treinoForm.atletaId}
                   onChange={e => setTreinoForm(p => ({ ...p, atletaId: e.target.value }))}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                  className={inputCls}>
                   <option value="">— selecione o atleta —</option>
-                  {atletas.map(a => (
-                    <option key={a.id} value={a.id}>{a.nome}</option>
-                  ))}
+                  {atletas.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1">Título do Treino <span className="text-red-400">*</span></label>
                 <input required value={treinoForm.titulo} onChange={e => setTreinoForm(p => ({ ...p, titulo: e.target.value }))}
-                  placeholder="ex: Treino A – Peito e Tríceps"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+                  placeholder="ex: Treino A – Peito e Tríceps" className={inputCls} />
               </div>
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1">Descrição / Orientações</label>
+              <textarea value={treinoForm.descricao} onChange={e => setTreinoForm(p => ({ ...p, descricao: e.target.value }))}
+                rows={2} placeholder="Foco em execução lenta, intervalo de 90s entre séries..."
+                className={`${inputCls} resize-none`} />
             </div>
             <div>
               <label className="block text-xs text-zinc-400 mb-1">Exercícios</label>
               <textarea value={treinoForm.exercicios} onChange={e => setTreinoForm(p => ({ ...p, exercicios: e.target.value }))}
                 rows={4} placeholder="Ex: Supino 4x10, Crucifixo 3x12, Tríceps pulley 4x12..."
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none" />
+                className={`${inputCls} resize-none`} />
             </div>
+
+            {videos.length > 0 && (
+              <div>
+                <label className="block text-xs text-zinc-400 mb-2">Vídeos da biblioteca (selecione os que se aplicam)</label>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {videos.map(v => {
+                    const checked = treinoForm.videoIds.includes(v.id)
+                    return (
+                      <label key={v.id}
+                        className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-yellow-400/10 border border-yellow-400/30' : 'bg-zinc-800 border border-transparent hover:border-zinc-600'}`}>
+                        <input type="checkbox" checked={checked} onChange={() => toggleVideoId(v.id)} className="accent-yellow-400" />
+                        <div className="min-w-0">
+                          <p className="text-sm text-white truncate">{v.titulo}</p>
+                          {v.descricao && <p className="text-xs text-zinc-500 truncate">{v.descricao}</p>}
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button type="submit" disabled={savingTreino}
                 className="flex items-center gap-1.5 bg-yellow-400 text-zinc-900 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-yellow-300 disabled:opacity-50">
@@ -230,7 +386,7 @@ export default function Treinos() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-zinc-800">
-                  {['Atleta', 'Treino', 'Data', ''].map(h => (
+                  {['Atleta', 'Treino', 'Vídeos', 'Data', ''].map(h => (
                     <th key={h} className="text-left py-3 px-4 text-xs text-zinc-500 font-medium">{h}</th>
                   ))}
                 </tr>
@@ -239,7 +395,19 @@ export default function Treinos() {
                 {treinos.map(t => (
                   <tr key={t.id} className="border-b border-zinc-800/50 hover:bg-zinc-900/50 transition-colors">
                     <td className="py-3 px-4 font-medium">{t.atletaNome}</td>
-                    <td className="py-3 px-4 text-zinc-300 text-sm">{t.titulo}</td>
+                    <td className="py-3 px-4 text-zinc-300 text-sm">
+                      <p>{t.titulo}</p>
+                      {t.descricao && <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{t.descricao}</p>}
+                    </td>
+                    <td className="py-3 px-4">
+                      {t.videos?.length > 0 ? (
+                        <span className="flex items-center gap-1 text-xs text-yellow-400/80">
+                          <Video size={11} /> {t.videos.length}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-700 text-xs">—</span>
+                      )}
+                    </td>
                     <td className="py-3 px-4 text-zinc-500 text-xs">{new Date(t.criadoEm).toLocaleDateString('pt-BR')}</td>
                     <td className="py-3 px-4 text-right">
                       <button onClick={() => deleteTreino(t.id)} className="text-zinc-600 hover:text-red-400"><Trash2 size={13} /></button>

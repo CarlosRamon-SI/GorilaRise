@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { api } from '@/lib/api'
-import { Plus, Pencil, Trash2, X, Check, Upload, Medal } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Check, Upload, Medal, Eye, EyeOff } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Premiacao {
   id: number
@@ -9,15 +10,13 @@ interface Premiacao {
   atletaNome: string
   atletaId?: number | null
   data: string
-  imagemUrl?: string
+  imagemUrl?: string | null
   ativo: boolean
 }
 
 interface AtletaOpt { id: number; nome: string }
 
 const blank = () => ({ titulo: '', descricao: '', atletaNome: '', atletaId: '', data: '', imagemUrl: '' })
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'https://pressticket.adtecnologia.com.br'
 
 export default function Premiacoes() {
   const [items, setItems] = useState<Premiacao[]>([])
@@ -52,20 +51,22 @@ export default function Premiacoes() {
 
   async function uploadImagem(file: File) {
     setUploading(true)
-    const fd = new FormData(); fd.append('file', file)
-    const res = await api.upload<{ url: string }>('/upload', fd)
-    setForm(p => ({ ...p, imagemUrl: res.url }))
-    setUploading(false)
+    try {
+      const fd = new FormData(); fd.append('file', file)
+      const res = await api.upload<{ url: string }>('/upload', fd)
+      setForm(p => ({ ...p, imagemUrl: res.url }))
+    } catch {
+      toast.error('Erro ao enviar imagem.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true); setError('')
     try {
-      const payload = {
-        ...form,
-        atletaId: form.atletaId ? Number(form.atletaId) : null,
-      }
+      const payload = { ...form, atletaId: form.atletaId ? Number(form.atletaId) : null }
       if (editId) {
         const updated = await api.patch<Premiacao>(`/premiacoes/${editId}`, payload)
         setItems(prev => prev.map(p => p.id === editId ? updated : p))
@@ -83,8 +84,21 @@ export default function Premiacoes() {
 
   async function handleDelete(id: number) {
     if (!confirm('Remover esta premiação?')) return
-    await api.delete(`/premiacoes/${id}`)
-    setItems(prev => prev.filter(p => p.id !== id))
+    try {
+      await api.delete(`/premiacoes/${id}`)
+      setItems(prev => prev.filter(p => p.id !== id))
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao remover premiação.')
+    }
+  }
+
+  async function toggleAtivo(p: Premiacao) {
+    try {
+      const updated = await api.patch<Premiacao>(`/premiacoes/${p.id}`, { ativo: !p.ativo })
+      setItems(prev => prev.map(item => item.id === p.id ? updated : item))
+    } catch {
+      toast.error('Erro ao atualizar status.')
+    }
   }
 
   return (
@@ -144,13 +158,16 @@ export default function Premiacoes() {
                   placeholder="URL ou upload abaixo"
                   className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400" />
                 <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
-                  className="bg-zinc-700 hover:bg-zinc-600 px-3 py-2 rounded-lg text-zinc-300 transition-colors">
-                  <Upload size={15} />
+                  className="bg-zinc-700 hover:bg-zinc-600 px-3 py-2 rounded-lg text-zinc-300 disabled:opacity-50 transition-colors">
+                  {uploading ? '...' : <Upload size={15} />}
                 </button>
                 <input ref={fileRef} type="file" className="hidden" accept="image/*"
                   onChange={e => { const f = e.target.files?.[0]; if (f) uploadImagem(f) }} />
               </div>
-              {form.imagemUrl && <img src={`${BASE_URL}${form.imagemUrl}`} alt="" className="mt-2 h-20 rounded-lg object-cover" onError={e => (e.currentTarget.style.display = 'none')} />}
+              {form.imagemUrl && (
+                <img src={form.imagemUrl} alt="" className="mt-2 h-20 rounded-lg object-cover"
+                  onError={e => (e.currentTarget.style.display = 'none')} />
+              )}
             </div>
           </div>
           <div>
@@ -176,24 +193,38 @@ export default function Premiacoes() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {items.map(p => (
-            <div key={p.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group">
+            <div key={p.id} className={`bg-zinc-900 border rounded-xl overflow-hidden group transition-colors ${p.ativo ? 'border-zinc-800' : 'border-zinc-800/50 opacity-60'}`}>
               {p.imagemUrl && (
-                <img src={`${BASE_URL}${p.imagemUrl}`} alt={p.titulo}
+                <img src={p.imagemUrl} alt={p.titulo}
                   className="w-full h-36 object-cover"
                   onError={e => (e.currentTarget.style.display = 'none')} />
               )}
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold flex items-center gap-1.5"><Medal size={14} className="text-yellow-400" />{p.titulo}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold flex items-center gap-1.5">
+                      <Medal size={14} className="text-yellow-400 shrink-0" />
+                      <span className="truncate">{p.titulo}</span>
+                    </p>
                     {p.atletaNome && <p className="text-sm text-zinc-400 mt-0.5">{p.atletaNome}</p>}
-                    {p.data && <p className="text-xs text-zinc-500 mt-1">{new Date(p.data).toLocaleDateString('pt-BR')}</p>}
+                    {p.data && <p className="text-xs text-zinc-500 mt-1">{new Date(p.data + 'T12:00:00').toLocaleDateString('pt-BR')}</p>}
                     {p.descricao && <p className="text-xs text-zinc-400 mt-2 line-clamp-2">{p.descricao}</p>}
                   </div>
                   <div className="flex gap-1.5 shrink-0">
+                    <button
+                      onClick={() => toggleAtivo(p)}
+                      title={p.ativo ? 'Ocultar do site' : 'Publicar no site'}
+                      className={`transition-colors ${p.ativo ? 'text-green-500 hover:text-zinc-400' : 'text-zinc-600 hover:text-green-400'}`}>
+                      {p.ativo ? <Eye size={14} /> : <EyeOff size={14} />}
+                    </button>
                     <button onClick={() => startEdit(p)} className="text-zinc-600 hover:text-yellow-400 transition-colors"><Pencil size={14} /></button>
                     <button onClick={() => handleDelete(p.id)} className="text-zinc-600 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                   </div>
+                </div>
+                <div className="mt-2">
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${p.ativo ? 'bg-green-500/15 text-green-400' : 'bg-zinc-800 text-zinc-500'}`}>
+                    {p.ativo ? 'Publicada' : 'Oculta'}
+                  </span>
                 </div>
               </div>
             </div>
