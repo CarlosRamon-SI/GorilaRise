@@ -6,13 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { User, Calculator, Target } from 'lucide-react';
+import { User, Calculator, Target, Save, Check } from 'lucide-react';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
 
 interface DietPrescriptionProps {
   userName?: string;
+  atletaId?: number;
 }
 
-const DietPrescription = ({ userName }: DietPrescriptionProps) => {
+const DietPrescription = ({ userName, atletaId }: DietPrescriptionProps) => {
   const [formData, setFormData] = useState({
     peso: '',
     altura: '',
@@ -27,6 +30,8 @@ const DietPrescription = ({ userName }: DietPrescriptionProps) => {
   });
 
   const [prescription, setPrescription] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const modalidadesEsportivas = [
     'Atletismo', 'Boxe', 'Futebol', 'Vôlei', 'Basquete', 'Natação', 
@@ -132,6 +137,7 @@ const DietPrescription = ({ userName }: DietPrescriptionProps) => {
       'Corrida': 'Hidratação e reposição de eletrólitos'
     };
 
+    setSaved(false);
     setPrescription({
       calorias: caloriasObjetivo,
       proteinas,
@@ -140,6 +146,37 @@ const DietPrescription = ({ userName }: DietPrescriptionProps) => {
       agua: Math.round(peso * 35),
       recomendacao: recomendacoes[formData.modalidadeEsportiva as keyof typeof recomendacoes] || 'Mantenha uma alimentação equilibrada'
     });
+  };
+
+  const salvarPrescricao = async () => {
+    if (!atletaId || !prescription) return;
+    setSaving(true);
+    try {
+      await api.post('/dieta', {
+        atletaId,
+        peso: parseFloat(formData.peso),
+        altura: parseFloat(formData.altura),
+        idade: parseInt(formData.idade),
+        sexo: formData.sexo,
+        nivelAtividade: formData.nivelAtividade,
+        biotipo: formData.biotipo,
+        modalidadeEsportiva: formData.modalidadeEsportiva || undefined,
+        objetivo: formData.objetivo,
+        restricoes: formData.restricoes || undefined,
+        calorias: prescription.calorias,
+        proteinas: prescription.proteinas,
+        carboidratos: prescription.carboidratos,
+        gorduras: prescription.gorduras,
+        agua: prescription.agua,
+        recomendacao: prescription.recomendacao,
+      });
+      setSaved(true);
+      toast.success('Prescrição salva! O atleta já pode ver no painel dele.');
+    } catch (e: any) {
+      toast.error(e.message ?? 'Erro ao salvar prescrição.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -326,6 +363,16 @@ const DietPrescription = ({ userName }: DietPrescriptionProps) => {
                       <strong>Observação:</strong> Esta prescrição considera seu biotipo ({formData.biotipo}) e modalidade esportiva ({formData.modalidadeEsportiva}). Consulte um nutricionista para um plano detalhado.
                     </p>
                   </div>
+
+                  {atletaId && (
+                    <Button
+                      onClick={salvarPrescricao}
+                      disabled={saving || saved}
+                      className="w-full mt-4 bg-gorila-primary hover:bg-gorila-dark text-white gap-2"
+                    >
+                      {saved ? <><Check size={16} /> Salvo — atleta já pode ver no painel</> : <><Save size={16} /> {saving ? 'Salvando...' : 'Salvar prescrição para o atleta'}</>}
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="text-center p-8">

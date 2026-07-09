@@ -44,12 +44,12 @@ export default function AdminDocumentos() {
         body: formData,
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error ?? 'Erro no upload')
-      setForm(f => ({ ...f, fileUrl: `${BASE_API}${data.url}` }))
+      if (!res.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Erro no upload')
+      setForm(f => ({ ...f, fileUrl: data.url }))
       // Auto-preenche título se ainda estiver vazio
       if (!form.titulo) {
         const nome = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
-        setForm(f => ({ ...f, fileUrl: `${BASE_API}${data.url}`, titulo: nome }))
+        setForm(f => ({ ...f, fileUrl: data.url, titulo: nome }))
       }
     } catch (e: any) {
       setError(e.message)

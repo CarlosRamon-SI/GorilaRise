@@ -5,12 +5,21 @@ import Footer from '@/components/Footer'
 import { api } from '@/lib/api'
 import { Check, Zap } from 'lucide-react'
 
+type CategoriaPlano = 'ASSOCIACAO' | 'SOCIO_TORCEDOR' | 'TURMA_REGULAR'
+
 interface Plano {
   id: number
   nome: string
   valor: string
   descricao?: string
+  categoria: CategoriaPlano
 }
+
+const CATEGORIAS: { value: CategoriaPlano; label: string; subtitulo: string }[] = [
+  { value: 'ASSOCIACAO', label: 'Associação', subtitulo: 'Torne-se sócio do clube' },
+  { value: 'SOCIO_TORCEDOR', label: 'Sócio Torcedor', subtitulo: 'Apoie e acompanhe nossas equipes' },
+  { value: 'TURMA_REGULAR', label: 'Turmas Regulares', subtitulo: 'Modalidades esportivas e academia' },
+]
 
 const LEVEL_STYLES = [
   { border: 'border-zinc-300',        badge: 'bg-zinc-100 text-zinc-600',            cta: 'bg-gorila-primary text-white hover:bg-gorila-dark',        highlight: false },
@@ -22,6 +31,11 @@ const LEVEL_STYLES = [
 function parseBeneficios(descricao?: string): string[] {
   if (!descricao) return []
   return descricao.split('+').map(s => s.trim()).filter(Boolean)
+}
+
+// Planos antigos, cadastrados antes do campo categoria existir no back-end, caem em Turmas Regulares.
+function categoriaDe(p: Plano): CategoriaPlano {
+  return p.categoria ?? 'TURMA_REGULAR'
 }
 
 export default function Planos() {
@@ -54,53 +68,69 @@ export default function Planos() {
         )}
 
         {!isLoading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
-            {planos.map((plano, i) => {
-              const style = LEVEL_STYLES[i % LEVEL_STYLES.length]
-              const beneficios = parseBeneficios(plano.descricao)
+          <div className="space-y-14">
+            {CATEGORIAS.map(cat => {
+              const planosCategoria = planos.filter(p => categoriaDe(p) === cat.value)
+              if (planosCategoria.length === 0) return null
 
               return (
-                <div key={plano.id}
-                  className={`relative flex flex-col rounded-2xl border-2 p-6 ${style.border} ${style.highlight ? 'bg-white' : 'bg-white'}`}>
-
-                  {style.highlight && (
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                      <span className="flex items-center gap-1 bg-yellow-400 text-gorila-primary text-xs font-black px-3 py-1 rounded-full uppercase tracking-wide">
-                        <Zap size={11} fill="currentColor" /> Mais popular
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Badge nível */}
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full w-fit mb-4 ${style.badge}`}>
-                    {plano.nome}
-                  </span>
-
-                  {/* Preço */}
-                  <div className="mb-6">
-                    <span className="text-sm text-gray-400">R$</span>
-                    <span className="text-4xl font-black text-gorila-primary ml-1">
-                      {Number(plano.valor).toFixed(2).replace('.', ',')}
-                    </span>
-                    <span className="text-gray-400 text-sm">/mês</span>
+                <div key={cat.value}>
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-black text-gorila-primary">{cat.label}</h2>
+                    <p className="text-gray-400 text-sm mt-1">{cat.subtitulo}</p>
                   </div>
 
-                  {/* Benefícios */}
-                  {beneficios.length > 0 && (
-                    <ul className="flex-1 space-y-2.5 mb-6">
-                      {beneficios.map((b, j) => (
-                        <li key={j} className="flex items-start gap-2 text-sm text-gray-600">
-                          <Check size={15} className="text-green-500 shrink-0 mt-0.5" />
-                          {b}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                    {planosCategoria.map((plano, i) => {
+                      const style = LEVEL_STYLES[i % LEVEL_STYLES.length]
+                      const beneficios = parseBeneficios(plano.descricao)
 
-                  <Link to="/cadastro" state={{ planoId: plano.id }}
-                    className={`mt-auto block text-center text-sm font-bold py-3 px-4 rounded-xl transition-colors ${style.cta}`}>
-                    Assinar agora
-                  </Link>
+                      return (
+                        <div key={plano.id}
+                          className={`relative flex flex-col rounded-2xl border-2 p-6 ${style.border} ${style.highlight ? 'bg-white' : 'bg-white'}`}>
+
+                          {style.highlight && (
+                            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                              <span className="flex items-center gap-1 bg-yellow-400 text-gorila-primary text-xs font-black px-3 py-1 rounded-full uppercase tracking-wide">
+                                <Zap size={11} fill="currentColor" /> Mais popular
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Badge nível */}
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full w-fit mb-4 ${style.badge}`}>
+                            {plano.nome}
+                          </span>
+
+                          {/* Preço */}
+                          <div className="mb-6">
+                            <span className="text-sm text-gray-400">R$</span>
+                            <span className="text-4xl font-black text-gorila-primary ml-1">
+                              {Number(plano.valor).toFixed(2).replace('.', ',')}
+                            </span>
+                            <span className="text-gray-400 text-sm">/mês</span>
+                          </div>
+
+                          {/* Benefícios */}
+                          {beneficios.length > 0 && (
+                            <ul className="flex-1 space-y-2.5 mb-6">
+                              {beneficios.map((b, j) => (
+                                <li key={j} className="flex items-start gap-2 text-sm text-gray-600">
+                                  <Check size={15} className="text-green-500 shrink-0 mt-0.5" />
+                                  {b}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+
+                          <Link to="/cadastro" state={{ planoId: plano.id }}
+                            className={`mt-auto block text-center text-sm font-bold py-3 px-4 rounded-xl transition-colors ${style.cta}`}>
+                            Assinar agora
+                          </Link>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )
             })}

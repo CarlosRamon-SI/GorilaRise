@@ -204,7 +204,7 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['treinos-wod'] })
       setWodForm({ titulo: '', descricao: '', exercicios: '', data: todayStr() })
-      toast.success('WOD criado!')
+      toast.success('Condicionamento físico criado!')
     },
     onError: (e: any) => toast.error(e.message),
   })
@@ -220,7 +220,7 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
         {(['fichas', 'wod', 'biblioteca'] as const).map(s => (
           <button key={s} onClick={() => setSub(s)}
             className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${sub === s ? 'bg-gorila-primary text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-gorila-primary'}`}>
-            {s === 'fichas' ? 'Fichas Individuais' : s === 'wod' ? 'WODs' : `Biblioteca (${templates.length})`}
+            {s === 'fichas' ? 'Fichas Individuais' : s === 'wod' ? 'Condicionamento Físico' : `Biblioteca (${templates.length})`}
           </button>
         ))}
       </div>
@@ -427,7 +427,7 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-gorila-primary flex items-center gap-2 text-sm">
-                <Plus size={15} /> Novo WOD
+                <Plus size={15} /> Novo Condicionamento Físico
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -435,7 +435,7 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Título</label>
                   <Input
-                    placeholder="Ex: WOD Terça-feira"
+                    placeholder="Ex: Condicionamento Terça-feira"
                     value={wodForm.titulo}
                     onChange={e => setWodForm(f => ({ ...f, titulo: e.target.value }))}
                   />
@@ -452,7 +452,7 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Descrição</label>
                 <Input
-                  placeholder="Breve descrição do WOD"
+                  placeholder="Breve descrição do condicionamento físico"
                   value={wodForm.descricao}
                   onChange={e => setWodForm(f => ({ ...f, descricao: e.target.value }))}
                 />
@@ -471,18 +471,18 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
                 disabled={!wodForm.titulo || !wodForm.data || createWod.isPending}
                 size="sm"
                 className="bg-gorila-primary text-white hover:bg-gorila-primary/90">
-                {createWod.isPending ? 'Salvando...' : 'Criar WOD'}
+                {createWod.isPending ? 'Salvando...' : 'Criar Condicionamento Físico'}
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-gorila-primary text-sm">WODs Cadastrados ({wods.length})</CardTitle>
+              <CardTitle className="text-gorila-primary text-sm">Condicionamentos Físicos Cadastrados ({wods.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {wods.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">Nenhum WOD cadastrado ainda.</p>
+                <p className="text-sm text-gray-400 text-center py-6">Nenhum condicionamento físico cadastrado ainda.</p>
               ) : (
                 <div className="space-y-2">
                   {wods.map(w => (
@@ -499,7 +499,7 @@ function TabPrescricao({ atletas }: { atletas: Atleta[] }) {
                         )}
                       </div>
                       <button
-                        onClick={() => { if (window.confirm('Excluir este WOD?')) deleteWod.mutate(w.id) }}
+                        onClick={() => { if (window.confirm('Excluir este condicionamento físico?')) deleteWod.mutate(w.id) }}
                         className="text-gray-300 hover:text-red-500 transition-colors shrink-0 mt-0.5">
                         <Trash2 size={14} />
                       </button>
@@ -1220,7 +1220,7 @@ function DietTab({ atletas }: { atletas: Atleta[] }) {
           </select>
         </CardContent>
       </Card>
-      <DietPrescription userName={atletaNome || 'Atleta'} />
+      <DietPrescription key={atletaSelecionado} userName={atletaNome || 'Atleta'} atletaId={atletaSelecionado ? Number(atletaSelecionado) : undefined} />
     </div>
   )
 }
@@ -1415,7 +1415,7 @@ function TabEscalacao({ atletas }: { atletas: Atleta[] }) {
                 <input
                   value={titulo}
                   onChange={e => setTitulo(e.target.value)}
-                  placeholder="Ex: WOD Sábado"
+                  placeholder="Ex: Condicionamento Sábado"
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-gorila-yellow transition-colors"
                 />
               </div>

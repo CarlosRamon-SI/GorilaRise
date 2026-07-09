@@ -115,9 +115,9 @@ export default function Treinos() {
   }
 
   async function deleteWOD(id: number) {
-    if (!confirm('Remover WOD?')) return
+    if (!confirm('Remover condicionamento físico?')) return
     try { await api.delete(`/treinos/wod/${id}`); setWods(prev => prev.filter(w => w.id !== id)) }
-    catch { toast.error('Erro ao remover WOD.') }
+    catch { toast.error('Erro ao remover condicionamento físico.') }
   }
 
   async function deleteTreino(id: number) {
@@ -147,18 +147,18 @@ export default function Treinos() {
     <div className="p-8 space-y-10">
       <div>
         <h1 className="text-2xl font-bold">Treinos</h1>
-        <p className="text-zinc-400 text-sm mt-1">WOD diário, fichas individuais e biblioteca de vídeos</p>
+        <p className="text-zinc-400 text-sm mt-1">Condicionamento físico diário, fichas individuais e biblioteca de vídeos</p>
       </div>
 
       {/* WOD */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Zap size={18} className="text-yellow-400" /> WOD — Treino do Dia
+            <Zap size={18} className="text-yellow-400" /> Condicionamento Físico — Treino do Dia
           </h2>
           <button onClick={() => setShowWodForm(v => !v)}
             className="flex items-center gap-2 bg-yellow-400 text-zinc-900 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-yellow-300">
-            <Plus size={14} /> Novo WOD
+            <Plus size={14} /> Novo Condicionamento Físico
           </button>
         </div>
 
@@ -192,7 +192,7 @@ export default function Treinos() {
             <div className="flex gap-2">
               <button type="submit" disabled={savingWod}
                 className="flex items-center gap-1.5 bg-yellow-400 text-zinc-900 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-yellow-300 disabled:opacity-50">
-                <Check size={13} /> {savingWod ? 'Publicando...' : 'Publicar WOD'}
+                <Check size={13} /> {savingWod ? 'Publicando...' : 'Publicar Condicionamento Físico'}
               </button>
               <button type="button" onClick={() => setShowWodForm(false)}
                 className="px-3 py-1.5 rounded-lg text-xs text-zinc-400 hover:bg-zinc-800"><X size={13} /></button>
@@ -203,7 +203,7 @@ export default function Treinos() {
         {loadingWod ? (
           <div className="space-y-2">{[1,2].map(i => <div key={i} className="h-20 bg-zinc-900 rounded-xl animate-pulse" />)}</div>
         ) : wods.length === 0 ? (
-          <div className="text-center py-8 text-zinc-600 text-sm bg-zinc-900 rounded-xl">Nenhum WOD publicado.</div>
+          <div className="text-center py-8 text-zinc-600 text-sm bg-zinc-900 rounded-xl">Nenhum condicionamento físico publicado.</div>
         ) : (
           <div className="space-y-3">
             {wods.map(w => (

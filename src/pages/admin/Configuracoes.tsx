@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
-import { Save, MapPin, Phone, Clock, Share2, Mail, Bell, Info, Building2 } from 'lucide-react'
+import { Save, MapPin, Phone, Clock, Share2, Mail, Bell, Info, Building2, Globe, Eye, Loader2 } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 interface HorarioDia {
   aberto: boolean
@@ -45,6 +46,16 @@ interface Configuracoes {
   emailPlanoVencido: boolean
   exibirCategoriasPatrocinadores: boolean
   permitirAlteracaoFotos: boolean
+
+  // Identidade do site
+  nomeSite: string
+  descricaoSite: string
+
+  // Gmail OAuth2
+  gmailUser: string
+  gmailClientId: string
+  gmailClientSecret: string
+  gmailRefreshToken: string
 }
 
 const DIAS = [
@@ -69,6 +80,9 @@ const emptyConfig = (): Configuracoes => ({
   emailMatriculaCancelada: true, emailPagamentoConfirmado: true, emailPlanoVencendo: true, emailPlanoVencido: false,
   exibirCategoriasPatrocinadores: false,
   permitirAlteracaoFotos: true,
+  nomeSite: 'Gorila Rise',
+  descricaoSite: 'Esporte Clube Gorila Rise - Mantenha-se forte. Academia, crossfit, natação e muito mais.',
+  gmailUser: '', gmailClientId: '', gmailClientSecret: '', gmailRefreshToken: '',
 })
 
 function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
@@ -90,12 +104,19 @@ export default function Configuracoes() {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
+  const [previewLabel, setPreviewLabel] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewData, setPreviewData] = useState<{ subject: string; html: string } | null>(null)
+  const [previewError, setPreviewError] = useState('')
+
   useEffect(() => {
-    api.get<Configuracoes>('/configuracoes')
+    api.get<Configuracoes>('/admin/configuracoes')
       .then(data => setConfig(prev => ({
         ...prev,
         ...data,
         smtpSenha: '',
+        gmailClientSecret: '',
+        gmailRefreshToken: '',
         horarios: { ...emptyConfig().horarios, ...data.horarios },
       })))
       .catch(err => setError(err.message ?? 'Erro ao carregar configurações.'))
@@ -128,6 +149,8 @@ export default function Configuracoes() {
     try {
       const payload = { ...config }
       if (!payload.smtpSenha) delete (payload as Partial<Configuracoes>).smtpSenha
+      if (!payload.gmailClientSecret) delete (payload as Partial<Configuracoes>).gmailClientSecret
+      if (!payload.gmailRefreshToken) delete (payload as Partial<Configuracoes>).gmailRefreshToken
       await api.patch('/admin/configuracoes', payload)
       setSuccess(true)
     } catch (err: any) {
@@ -151,6 +174,21 @@ export default function Configuracoes() {
     }
   }
 
+  async function handlePreview(field: string, label: string) {
+    setPreviewLabel(label)
+    setPreviewData(null)
+    setPreviewError('')
+    setPreviewLoading(true)
+    try {
+      const data = await api.get<{ subject: string; html: string }>(`/admin/configuracoes/email-preview/${field}`)
+      setPreviewData(data)
+    } catch (err: any) {
+      setPreviewError(err.message ?? 'Erro ao carregar modelo de email')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -164,6 +202,7 @@ export default function Configuracoes() {
   const inp = "w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-yellow-400 transition-colors"
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="p-8 space-y-6">
 
       {/* Header */}
@@ -480,15 +519,133 @@ export default function Configuracoes() {
               >
                 <span className={`absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform ${config[field] ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
               </button>
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className={`text-sm font-medium ${config[field] ? 'text-white' : 'text-zinc-500'}`}>{label}</p>
                 <p className="text-xs text-zinc-600">{desc}</p>
               </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => handlePreview(field, label)}
+                    className="mt-0.5 p-1.5 rounded-md text-zinc-500 hover:text-yellow-400 hover:bg-zinc-700/60 transition-colors flex-shrink-0"
+                  >
+                    <Eye size={15} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Ver modelo do email</TooltipContent>
+              </Tooltip>
             </div>
           ))}
         </div>
       </section>
 
+      {/* Gmail OAuth2 */}
+      <section className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 col-span-1 lg:col-span-2">
+        <SectionTitle icon={Mail} title="Gmail OAuth2 (envio de e-mails)" />
+        <p className="text-xs text-zinc-500 mb-4">
+          Quando configurado, o Gmail OAuth2 tem <span className="text-white font-medium">prioridade</span> sobre o SMTP convencional.
+          Obtenha as credenciais no <span className="text-yellow-400">Google Cloud Console</span> e o Refresh Token via{' '}
+          <span className="text-yellow-400">OAuth Playground</span>.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[
+            { field: 'gmailUser'     as const, label: 'Conta Gmail',     placeholder: 'noreply@gmail.com',         sensitive: false },
+            { field: 'gmailClientId' as const, label: 'Client ID',       placeholder: '123456789.apps.googleusercontent.com', sensitive: false },
+            { field: 'gmailClientSecret' as const, label: 'Client Secret', placeholder: config.gmailClientSecret ? '••••••••' : 'Não configurado', sensitive: true },
+            { field: 'gmailRefreshToken' as const, label: 'Refresh Token',  placeholder: config.gmailRefreshToken ? '••••••••' : 'Não configurado', sensitive: true },
+          ].map(({ field, label, placeholder, sensitive }) => (
+            <div key={field}>
+              <label className="block text-xs text-zinc-400 mb-1">
+                {label}
+                {sensitive && <span className="ml-1 text-zinc-600">(deixe em branco para manter o valor atual)</span>}
+              </label>
+              <input
+                value={config[field]}
+                onChange={e => set(field, e.target.value)}
+                type={sensitive ? 'password' : 'text'}
+                placeholder={placeholder}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400"
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Identidade do Site */}
+      <section className="bg-zinc-900 rounded-xl p-6 border border-zinc-800 col-span-1 lg:col-span-2">
+        <SectionTitle icon={Globe} title="Identidade do Site" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Nome do site <span className="text-zinc-600">(título da aba / SEO)</span></label>
+            <input
+              value={config.nomeSite}
+              onChange={e => set('nomeSite', e.target.value)}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400"
+              placeholder="Gorila Rise"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">Descrição do site <span className="text-zinc-600">(meta description / compartilhamento)</span></label>
+            <textarea
+              value={config.descricaoSite}
+              onChange={e => set('descricaoSite', e.target.value)}
+              rows={2}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400 resize-none"
+              placeholder="Esporte Clube Gorila Rise - Mantenha-se forte..."
+            />
+          </div>
+        </div>
+        <div className="mt-3 flex items-start gap-2 p-3 bg-zinc-800/60 rounded-lg border border-zinc-700/40">
+          <Info size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-zinc-500">
+            <span className="text-yellow-400 font-medium">Nome do app (PWA):</span> exibido na tela inicial de dispositivos móveis onde o app estiver instalado.
+            A atualização desse campo requer um <span className="text-zinc-300 font-medium">rebuild da aplicação</span> para ser aplicada no manifest do PWA.
+            As demais alterações (SEO e compartilhamento social) entram em vigor imediatamente após salvar.
+          </p>
+        </div>
+      </section>
+
     </form>
+
+    <Dialog open={previewLabel !== null} onOpenChange={open => { if (!open) setPreviewLabel(null) }}>
+      <DialogContent className="max-w-2xl bg-zinc-900 border-zinc-700 text-white max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-white">
+            <Mail size={16} className="text-yellow-400" />
+            {previewLabel}
+          </DialogTitle>
+          {previewData && (
+            <p className="text-xs text-zinc-500 pt-1">
+              Assunto: <span className="text-zinc-300">{previewData.subject}</span>
+            </p>
+          )}
+        </DialogHeader>
+
+        <div className="flex-1 min-h-0 overflow-hidden rounded-lg border border-zinc-700">
+          {previewLoading && (
+            <div className="h-[60vh] flex items-center justify-center text-zinc-500 gap-2">
+              <Loader2 size={18} className="animate-spin" /> Carregando modelo...
+            </div>
+          )}
+          {!previewLoading && previewError && (
+            <div className="h-[60vh] flex items-center justify-center text-red-400 text-sm px-6 text-center">{previewError}</div>
+          )}
+          {!previewLoading && previewData && (
+            <iframe
+              title="Pré-visualização do email"
+              srcDoc={previewData.html}
+              sandbox=""
+              className="w-full h-[60vh] bg-white"
+            />
+          )}
+        </div>
+
+        <p className="text-xs text-zinc-600">
+          Pré-visualização com dados fictícios — o conteúdo real usa as informações do atleta/matrícula no momento do envio.
+        </p>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

@@ -6,16 +6,17 @@ interface Notificacao {
   id: number
   titulo: string
   corpo: string
-  tipo: 'AVISO' | 'EVENTO' | 'COMUNICADO'
+  tipo: 'AVISO' | 'EVENTO' | 'COMUNICADO' | 'CONVOCACAO'
   destinatarioRole?: string | null
   criadoEm: string
 }
 
-const TIPOS = { AVISO: 'Aviso', EVENTO: 'Evento', COMUNICADO: 'Comunicado' }
+const TIPOS = { AVISO: 'Aviso', EVENTO: 'Evento', COMUNICADO: 'Comunicado', CONVOCACAO: 'Convocação' }
 const TIPO_COLORS: Record<string, string> = {
   AVISO: 'bg-yellow-500/20 text-yellow-400',
   EVENTO: 'bg-blue-500/20 text-blue-400',
   COMUNICADO: 'bg-purple-500/20 text-purple-400',
+  CONVOCACAO: 'bg-green-500/20 text-green-400',
 }
 const DESTINATARIOS: Record<string, string> = {
   '':               'Todos',
@@ -83,7 +84,7 @@ export default function Notificacoes() {
             <label className="block text-xs text-zinc-400 mb-1">Tipo</label>
             <select value={form.tipo} onChange={e => setForm(p => ({ ...p, tipo: e.target.value as typeof form.tipo }))}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
-              {Object.entries(TIPOS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              {Object.entries(TIPOS).filter(([v]) => v !== 'CONVOCACAO').map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </div>
           <div>

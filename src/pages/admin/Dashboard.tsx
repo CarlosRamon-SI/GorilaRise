@@ -62,7 +62,7 @@ const statCards = (s: Stats) => [
     trend: '+8%', trendUp: true, to: '/admin/leads',
   },
   {
-    label: 'Projetos Sociais', value: s.projetos, icon: Heart,
+    label: 'Projetos Culturais', value: s.projetos, icon: Heart,
     accent: 'border-l-zinc-600', iconCls: 'text-zinc-400',
     trend: null, trendUp: null, to: '/admin/projetos',
   },

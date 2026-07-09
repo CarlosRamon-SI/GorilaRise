@@ -133,7 +133,7 @@ const Institucional = () => {
 
         {/* Projetos Sociais */}
         <section className="mb-16">
-          <h2 className="text-2xl font-bold text-gorila-primary mb-8">Projetos Sociais</h2>
+          <h2 className="text-2xl font-bold text-gorila-primary mb-8">Projetos Culturais</h2>
 
           {loadingProjetos && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -144,7 +144,7 @@ const Institucional = () => {
           )}
 
           {!loadingProjetos && projetos.length === 0 && (
-            <p className="text-gray-400 text-sm">Nenhum projeto social cadastrado ainda.</p>
+            <p className="text-gray-400 text-sm">Nenhum projeto cultural cadastrado ainda.</p>
           )}
 
           {!loadingProjetos && projetos.length > 0 && (

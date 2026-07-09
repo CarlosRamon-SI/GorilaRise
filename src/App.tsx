@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import { api } from "@/lib/api";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Cadastro from "./pages/Cadastro";
@@ -26,6 +28,8 @@ import Planos from "./pages/Planos";
 import RiseKids from "./pages/RiseKids";
 import AnjosDoEsporte from "./pages/AnjosDoEsporte";
 import PremiacoesPublicas from "./pages/PremiacoesPublicas";
+import RecuperarSenha from "./pages/RecuperarSenha";
+import RedefinirSenha from "./pages/RedefinirSenha";
 import AdminLayout from "./components/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Usuarios from "./pages/admin/Usuarios";
@@ -56,18 +60,41 @@ import { InstallPWA } from "./components/InstallPWA";
 
 const queryClient = new QueryClient();
 
+function SiteIdentity() {
+  useEffect(() => {
+    api.get<{ nomeSite?: string; descricaoSite?: string }>('/configuracoes').then(cfg => {
+      if (cfg.nomeSite) document.title = cfg.nomeSite
+      const setMeta = (sel: string, val: string) => {
+        const el = document.querySelector(sel)
+        if (el) el.setAttribute('content', val)
+      }
+      if (cfg.descricaoSite) {
+        setMeta('meta[name="description"]', cfg.descricaoSite)
+        setMeta('meta[property="og:description"]', cfg.descricaoSite)
+      }
+      if (cfg.nomeSite) {
+        setMeta('meta[property="og:title"]', cfg.nomeSite)
+      }
+    }).catch(() => {})
+  }, [])
+  return null
+}
+
 const App = () => (
   <AuthProvider>
     <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <SiteIdentity />
       <InstallPWA />
       <BrowserRouter>
         <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/recuperar-senha" element={<RecuperarSenha />} />
+          <Route path="/redefinir-senha" element={<RedefinirSenha />} />
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/painel" element={<PainelAtleta />} />
           <Route path="/painel-professor" element={<PainelProfessor />} />

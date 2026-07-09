@@ -44,19 +44,19 @@ const NAV_GROUPS = [
   {
     label: 'Pessoas',
     items: [
-      { to: '/admin/usuarios', label: 'Usuários', icon: Users },
-      { to: '/admin/funcionarios', label: 'Funcionários', icon: Users2 },
-      { to: '/admin/leads', label: 'Leads', icon: UserPlus },
-      { to: '/admin/anamneses', label: 'Anamneses', icon: ClipboardCheck },
-      { to: '/admin/desempenho', label: 'Desempenho', icon: TrendingUp },
+      { to: '/admin/usuarios', label: 'Usuários', icon: Users, adminOnly: true },
+      { to: '/admin/funcionarios', label: 'Funcionários', icon: Users2, adminOnly: true },
+      { to: '/admin/leads', label: 'Leads', icon: UserPlus, adminOnly: true },
+      { to: '/admin/anamneses', label: 'Anamneses', icon: ClipboardCheck, adminOnly: true },
+      { to: '/admin/desempenho', label: 'Desempenho', icon: TrendingUp, adminOnly: true },
     ],
   },
   {
     label: 'Operação',
     items: [
-      { to: '/admin/modalidades', label: 'Modalidades', icon: Layers },
-      { to: '/admin/planos', label: 'Planos', icon: CreditCard },
-      { to: '/admin/matriculas', label: 'Matrículas', icon: ClipboardList },
+      { to: '/admin/modalidades', label: 'Modalidades', icon: Layers, adminOnly: true },
+      { to: '/admin/planos', label: 'Planos', icon: CreditCard, adminOnly: true },
+      { to: '/admin/matriculas', label: 'Matrículas', icon: ClipboardList, adminOnly: true },
       { to: '/admin/turmas', label: 'Turmas', icon: GraduationCap },
       { to: '/admin/ambientes', label: 'Ambientes', icon: MapPin },
       { to: '/admin/treinos', label: 'Treinos', icon: Dumbbell },
@@ -66,25 +66,25 @@ const NAV_GROUPS = [
   {
     label: 'Financeiro & Comunicação',
     items: [
-      { to: '/admin/financeiro', label: 'Financeiro', icon: DollarSign },
-      { to: '/admin/notificacoes', label: 'Notificações', icon: Bell },
-      { to: '/admin/eventos', label: 'Eventos / Jogos', icon: CalendarDays },
+      { to: '/admin/financeiro', label: 'Financeiro', icon: DollarSign, adminOnly: true },
+      { to: '/admin/notificacoes', label: 'Notificações', icon: Bell, adminOnly: true },
+      { to: '/admin/eventos', label: 'Eventos / Jogos', icon: CalendarDays, adminOnly: true },
     ],
   },
   {
     label: 'Clube',
     items: [
-      { to: '/admin/premiacoes', label: 'Premiações', icon: Medal },
-      { to: '/admin/patrocinadores', label: 'Patrocinadores', icon: Building2 },
-      { to: '/admin/clube-vantagens', label: 'Clube de Vantagens', icon: Gift },
-      { to: '/admin/projetos', label: 'Proj. Sociais', icon: Heart },
-      { to: '/admin/documentos', label: 'Documentos', icon: FileText },
+      { to: '/admin/premiacoes', label: 'Premiações', icon: Medal, adminOnly: true },
+      { to: '/admin/patrocinadores', label: 'Patrocinadores', icon: Building2, adminOnly: true },
+      { to: '/admin/clube-vantagens', label: 'Clube de Vantagens', icon: Gift, adminOnly: true },
+      { to: '/admin/projetos', label: 'Proj. Cultural', icon: Heart, adminOnly: true },
+      { to: '/admin/documentos', label: 'Documentos', icon: FileText, adminOnly: true },
     ],
   },
   {
     label: 'Sistema',
     items: [
-      { to: '/admin/configuracoes', label: 'Configurações', icon: Settings },
+      { to: '/admin/configuracoes', label: 'Configurações', icon: Settings, adminOnly: true },
     ],
   },
 ]
@@ -116,13 +116,18 @@ function SidebarContent({ onNavigate, pendingUsers }: { onNavigate?: () => void;
 
       {/* Nav groups */}
       <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
-        {NAV_GROUPS.map(group => (
+        {NAV_GROUPS.map(group => {
+          const visibleItems = group.items.filter(item =>
+            !('adminOnly' in item && item.adminOnly) || user?.role === 'ADMIN'
+          )
+          if (visibleItems.length === 0) return null
+          return (
           <div key={group.label}>
             <p className="px-2 mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-zinc-600">
               {group.label}
             </p>
             <div className="space-y-0.5">
-              {group.items.map(({ to, label, icon: Icon, end }) => {
+              {visibleItems.map(({ to, label, icon: Icon, end }) => {
                 const showBadge = label === 'Usuários' && pendingUsers > 0
                 return (
                   <NavLink
@@ -157,7 +162,8 @@ function SidebarContent({ onNavigate, pendingUsers }: { onNavigate?: () => void;
               })}
             </div>
           </div>
-        ))}
+          )
+        })}
       </nav>
 
       {/* User footer */}

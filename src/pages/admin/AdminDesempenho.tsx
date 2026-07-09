@@ -23,7 +23,7 @@ export default function AdminDesempenho() {
   const [loadingRec, setLoadingRec] = useState(false)
 
   useEffect(() => {
-    api.get<AtletaItem[]>('/admin/usuarios?role=USUARIO&ativo=true')
+    api.get<AtletaItem[]>('/admin/usuarios?role=ATLETA&ativo=true')
       .then(setAtletas)
       .catch(() => {})
       .finally(() => setLoading(false))

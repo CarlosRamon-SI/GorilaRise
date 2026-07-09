@@ -18,7 +18,7 @@ import {
   LayoutDashboard, User, CreditCard, Dumbbell, Clock, FileText,
   CheckCircle, Trophy, Camera, LogOut, ChevronRight,
   CalendarDays, ShieldCheck, Mail, Layers, Target, Calendar,
-  Upload, Activity, Zap, Bell, Gift, Video, ExternalLink
+  Upload, Activity, Zap, Bell, Gift, Video, ExternalLink, Salad, Droplets, Flame
 } from 'lucide-react'
 
 interface Perfil {
@@ -32,7 +32,7 @@ interface Perfil {
     id: number
     status: string
     modalidade: { nome: string; categoria: string }
-    plano: { nome: string; valor: string }
+    plano: { nome: string; valor: string; categoria: string }
   }[]
 }
 
@@ -57,7 +57,7 @@ interface WOD {
 }
 
 interface Notificacao {
-  id: number; titulo: string; corpo: string; tipo: string; criadoEm: string
+  id: number; titulo: string; corpo: string; tipo: string; criadoEm: string; lida: boolean
 }
 
 function iniciais(nome?: string) {
@@ -65,11 +65,18 @@ function iniciais(nome?: string) {
   return nome.trim().split(/\s+/).slice(0, 2).map(n => n[0] ?? '').join('').toUpperCase() || '?'
 }
 
+const CATEGORIA_PLANO_LABEL: Record<string, string> = {
+  ASSOCIACAO: 'Associação',
+  SOCIO_TORCEDOR: 'Sócio Torcedor',
+  TURMA_REGULAR: 'Turma Regular',
+}
+
 const MENU = [
   { id: 'dashboard',      label: 'Dashboard',         short: 'Home',     icon: LayoutDashboard },
   { id: 'perfil',         label: 'Meu Perfil',         short: 'Perfil',   icon: User },
-  { id: 'matricula',      label: 'Cartão Associado',   short: 'Cartão',   icon: CreditCard },
+  { id: 'matricula',      label: 'Meus Planos',        short: 'Planos',   icon: CreditCard },
   { id: 'ficha',          label: 'Ficha de Treino',    short: 'Ficha',    icon: Dumbbell },
+  { id: 'dieta',          label: 'Minha Dieta',        short: 'Dieta',    icon: Salad },
   { id: 'anamnese',       label: 'Anamnese',           short: 'Anamnese', icon: FileText },
   { id: 'checkin',        label: 'Check-in',           short: 'Check-in', icon: CheckCircle },
   { id: 'recordes',       label: 'Recordes Pessoais',  short: 'Records',  icon: Trophy },
@@ -186,6 +193,93 @@ function FichaTreinoTab() {
   )
 }
 
+interface PrescricaoDieta {
+  id: number; calorias: number; proteinas: number; carboidratos: number; gorduras: number
+  agua: number; recomendacao?: string | null; biotipo: string; objetivo: string; criadoEm: string
+}
+
+function MinhaDietaTab() {
+  const { user } = useAuth()
+  const { data: dieta, isLoading } = useQuery<PrescricaoDieta | null>({
+    queryKey: ['minha-dieta'],
+    queryFn: () => api.get('/dieta/minha'),
+    enabled: !!user,
+    retry: false,
+  })
+
+  if (isLoading) return (
+    <Card>
+      <CardContent className="py-12">
+        <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-5 bg-gray-100 rounded animate-pulse" />)}</div>
+      </CardContent>
+    </Card>
+  )
+
+  if (!dieta) return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-gorila-primary flex items-center gap-2 text-base">
+          <Salad size={17} /> Minha Dieta
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-center py-10 text-gray-400">
+          <Salad size={36} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm font-medium">Nenhuma dieta prescrita ainda.</p>
+          <p className="text-xs mt-1">Seu treinador poderá calcular e salvar uma prescrição para você.</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-gorila-primary flex items-center justify-between gap-2 text-base">
+          <span className="flex items-center gap-2"><Salad size={17} /> Minha Dieta</span>
+          <span className="text-[11px] font-normal text-gray-400">Atualizado em {new Date(dieta.criadoEm).toLocaleDateString('pt-BR')}</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <Flame size={16} className="text-orange-500 shrink-0" />
+            <div>
+              <p className="text-[11px] text-gray-400">Calorias</p>
+              <p className="font-bold text-gorila-primary">{dieta.calorias} kcal</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <Droplets size={16} className="text-blue-500 shrink-0" />
+            <div>
+              <p className="text-[11px] text-gray-400">Água</p>
+              <p className="font-bold text-gorila-primary">{dieta.agua} ml</p>
+            </div>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <p className="text-[11px] text-gray-400">Proteínas</p>
+            <p className="font-bold text-gorila-primary">{dieta.proteinas}g</p>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <p className="text-[11px] text-gray-400">Carboidratos</p>
+            <p className="font-bold text-gorila-primary">{dieta.carboidratos}g</p>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <p className="text-[11px] text-gray-400">Gorduras</p>
+            <p className="font-bold text-gorila-primary">{dieta.gorduras}g</p>
+          </div>
+        </div>
+        {dieta.recomendacao && (
+          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-800"><strong>Recomendação:</strong> {dieta.recomendacao}</p>
+          </div>
+        )}
+        <p className="text-xs text-gray-400 mt-3">Consulte um nutricionista para um plano detalhado. Esta é uma estimativa baseada em biotipo ({dieta.biotipo}) e objetivo ({dieta.objetivo}).</p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function PainelAtleta() {
   const { user, logout, loading: authLoading } = useAuth()
   const navigate = useNavigate()
@@ -244,7 +338,22 @@ export default function PainelAtleta() {
     retry: false,
   })
 
+  const naoLidas = notificacoes.filter(n => !n.lida).length
+
+  useEffect(() => {
+    if (tab !== 'notificacoes' || naoLidas === 0) return
+    // Optimistic: mark all as read in the cache immediately so the badge disappears at once
+    queryClient.setQueryData<Notificacao[]>(['notificacoes-atleta'], old =>
+      (old ?? []).map(n => ({ ...n, lida: true }))
+    )
+    // Persist to server; if it fails, revert to the true server state
+    api.post('/notificacoes/lidas', {}).catch(() => {
+      queryClient.invalidateQueries({ queryKey: ['notificacoes-atleta'] })
+    })
+  }, [tab, naoLidas]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const matriculaAtiva = !isLoading ? perfil?.matriculas?.find(m => m.status === 'ATIVA') : undefined
+  const matriculasAtivas = !isLoading ? (perfil?.matriculas?.filter(m => m.status === 'ATIVA') ?? []) : []
 
   const { data: anamneseCheck } = useQuery<{ id: number } | null>({
     queryKey: ['anamnese-check'],
@@ -331,10 +440,24 @@ export default function PainelAtleta() {
                 </div>
               </div>
             </div>
-            <Button onClick={handleLogout} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 gap-1.5 text-[12px] transition-all">
-              <LogOut size={14} />
-              <span className="hidden sm:inline">Sair</span>
-            </Button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setTab('notificacoes')}
+                className="relative p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-all"
+                aria-label="Notificações"
+              >
+                <Bell size={17} />
+                {naoLidas > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold leading-none">
+                    {naoLidas > 9 ? '9+' : naoLidas}
+                  </span>
+                )}
+              </button>
+              <Button onClick={handleLogout} variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 gap-1.5 text-[12px] transition-all">
+                <LogOut size={14} />
+                <span className="hidden sm:inline">Sair</span>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -357,6 +480,9 @@ export default function PainelAtleta() {
                   <item.icon size={15} className="shrink-0" />
                   {item.id === 'anamnese' && anamnesePendente && (
                     <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-amber-400 border border-gorila-primary" />
+                  )}
+                  {item.id === 'notificacoes' && naoLidas > 0 && (
+                    <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-red-500 border border-gorila-primary" />
                   )}
                 </div>
                 <span className="text-[9px] font-bold whitespace-nowrap leading-tight">{item.short}</span>
@@ -390,6 +516,11 @@ export default function PainelAtleta() {
                     <span className="flex-1 text-left">{item.label}</span>
                     {item.id === 'anamnese' && anamnesePendente && (
                       <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                    )}
+                    {item.id === 'notificacoes' && naoLidas > 0 && (
+                      <span className="min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold shrink-0">
+                        {naoLidas > 9 ? '9+' : naoLidas}
+                      </span>
                     )}
                     {tab === item.id && <ChevronRight size={12} className="opacity-60 shrink-0" />}
                   </button>
@@ -538,7 +669,7 @@ export default function PainelAtleta() {
                   <div className="bg-gorila-yellow/10 border border-gorila-yellow/30 rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-3">
                       <Zap size={16} className="text-gorila-primary" />
-                      <p className="text-[11px] font-bold uppercase tracking-widest text-gorila-primary/70">WOD do Dia — {new Date(wodHoje.data + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-gorila-primary/70">Condicionamento Físico do Dia — {new Date(wodHoje.data + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
                     </div>
                     <p className="text-base font-black text-gorila-primary mb-1">{wodHoje.titulo}</p>
                     {wodHoje.descricao && <p className="text-sm text-gray-600 mb-2">{wodHoje.descricao}</p>}
@@ -648,102 +779,126 @@ export default function PainelAtleta() {
               </div>
             )}
 
-            {/* Cartão Associado */}
+            {/* Meus Planos */}
             {tab === 'matricula' && (
               <div className="space-y-4 animate-fade-in">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-gorila-primary flex items-center gap-2 text-base">
-                      <CreditCard size={17} /> Cartão Associado
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoading ? (
+                {isLoading ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-gorila-primary flex items-center gap-2 text-base">
+                        <CreditCard size={17} /> Meus Planos
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
                       <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-5 bg-gray-100 rounded animate-pulse" />)}</div>
-                    ) : matriculaAtiva ? (
-                      <div className="space-y-6">
-                        {/* Card visual */}
-                        <div className="relative rounded-2xl p-6 text-white overflow-hidden"
-                          style={{ background: 'linear-gradient(135deg, #231f20 60%, #3a3335)' }}>
-                          <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-gorila-yellow/10 -translate-y-10 translate-x-10" />
-                          <div className="absolute bottom-0 left-0 w-28 h-28 rounded-full bg-white/5 translate-y-8 -translate-x-8" />
-                          <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-6">
-                              <img src="/lovable-uploads/b1d0c406-fb12-494e-ad8c-a0ad4760dda0.png" alt="logo" className="h-10 w-10 object-contain" />
-                              <span className="text-gorila-yellow font-black text-lg tracking-widest">GORILA RISE</span>
+                    </CardContent>
+                  </Card>
+                ) : matriculasAtivas.length > 0 ? (
+                  matriculasAtivas.map(matricula => (
+                    <Card key={matricula.id}>
+                      <CardHeader>
+                        <CardTitle className="text-gorila-primary flex items-center justify-between gap-2 text-base">
+                          <span className="flex items-center gap-2"><CreditCard size={17} /> {matricula.modalidade.nome}</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-gorila-primary/60 bg-gorila-yellow/15 px-2 py-1 rounded-full">
+                            {CATEGORIA_PLANO_LABEL[matricula.plano.categoria] ?? 'Turma Regular'}
+                          </span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-6">
+                          {/* Card visual */}
+                          <div className="relative rounded-2xl p-6 text-white overflow-hidden"
+                            style={{ background: 'linear-gradient(135deg, #231f20 60%, #3a3335)' }}>
+                            <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-gorila-yellow/10 -translate-y-10 translate-x-10" />
+                            <div className="absolute bottom-0 left-0 w-28 h-28 rounded-full bg-white/5 translate-y-8 -translate-x-8" />
+                            <div className="relative z-10">
+                              <div className="flex items-center justify-between mb-6">
+                                <img src="/lovable-uploads/b1d0c406-fb12-494e-ad8c-a0ad4760dda0.png" alt="logo" className="h-10 w-10 object-contain" />
+                                <span className="text-gorila-yellow font-black text-lg tracking-widest">GORILA RISE</span>
+                              </div>
+                              <p className="text-2xl font-bold mb-1">{perfil?.nome}</p>
+                              <p className="text-gorila-yellow text-sm font-medium mb-4">{matricula.modalidade.nome} · {matricula.plano.nome}</p>
+                              <div className="flex items-end justify-between">
+                                <div>
+                                  <p className="text-white/60 text-xs">Status</p>
+                                  <span className="inline-block mt-0.5 text-xs font-bold bg-green-500/20 text-green-300 border border-green-500/30 px-2 py-0.5 rounded-full">
+                                    {matricula.status}
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-white/60 text-xs">Plano</p>
+                                  <p className="text-gorila-yellow font-bold">R$ {Number(matricula.plano.valor).toFixed(2).replace('.',',')}/mês</p>
+                                </div>
+                              </div>
                             </div>
-                            <p className="text-2xl font-bold mb-1">{perfil?.nome}</p>
-                            <p className="text-gorila-yellow text-sm font-medium mb-4">{matriculaAtiva.modalidade.nome} · {matriculaAtiva.plano.nome}</p>
-                            <div className="flex items-end justify-between">
+                          </div>
+
+                          {/* QR Code */}
+                          <div className="flex flex-col items-center gap-3 py-4">
+                            <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">QR Code de Identificação</p>
+                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                              <QRCodeSVG
+                                value={`GORILA-RISE:MATRICULA:${matricula.id}:${perfil?.id}`}
+                                size={160}
+                                fgColor="#231f20"
+                                level="M"
+                              />
+                            </div>
+                            <p className="text-[11px] text-gray-400">Apresente na entrada da academia</p>
+                          </div>
+
+                          {/* Dados */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                            <div className="flex items-start gap-2">
+                              <Layers size={14} className="text-gorila-primary mt-0.5 shrink-0" />
                               <div>
-                                <p className="text-white/60 text-xs">Status</p>
-                                <span className="inline-block mt-0.5 text-xs font-bold bg-green-500/20 text-green-300 border border-green-500/30 px-2 py-0.5 rounded-full">
-                                  {matriculaAtiva.status}
+                                <p className="text-gray-400 text-xs">Modalidade</p>
+                                <p className="font-medium">{matricula.modalidade.nome}</p>
+                                <p className="text-xs text-gray-400">{matricula.modalidade.categoria}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <CreditCard size={14} className="text-gorila-primary mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-gray-400 text-xs">Plano</p>
+                                <p className="font-medium">{matricula.plano.nome}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <ShieldCheck size={14} className="text-green-500 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-gray-400 text-xs">Status</p>
+                                <span className="inline-block mt-0.5 text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                                  {matricula.status}
                                 </span>
                               </div>
-                              <div className="text-right">
-                                <p className="text-white/60 text-xs">Plano</p>
-                                <p className="text-gorila-yellow font-bold">R$ {Number(matriculaAtiva.plano.valor).toFixed(2).replace('.',',')}/mês</p>
-                              </div>
                             </div>
                           </div>
                         </div>
-
-                        {/* QR Code */}
-                        <div className="flex flex-col items-center gap-3 py-4">
-                          <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">QR Code de Identificação</p>
-                          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                            <QRCodeSVG
-                              value={`GORILA-RISE:MATRICULA:${matriculaAtiva.id}:${perfil?.id}`}
-                              size={160}
-                              fgColor="#231f20"
-                              level="M"
-                            />
-                          </div>
-                          <p className="text-[11px] text-gray-400">Apresente na entrada da academia</p>
-                        </div>
-
-                        {/* Dados */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                          <div className="flex items-start gap-2">
-                            <Layers size={14} className="text-gorila-primary mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-gray-400 text-xs">Modalidade</p>
-                              <p className="font-medium">{matriculaAtiva.modalidade.nome}</p>
-                              <p className="text-xs text-gray-400">{matriculaAtiva.modalidade.categoria}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <CreditCard size={14} className="text-gorila-primary mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-gray-400 text-xs">Plano</p>
-                              <p className="font-medium">{matriculaAtiva.plano.nome}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <ShieldCheck size={14} className="text-green-500 mt-0.5 shrink-0" />
-                            <div>
-                              <p className="text-gray-400 text-xs">Status</p>
-                              <span className="inline-block mt-0.5 text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                                {matriculaAtiva.status}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-gorila-primary flex items-center gap-2 text-base">
+                        <CreditCard size={17} /> Meus Planos
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
                       <div className="text-center py-8 text-gray-400">
                         <CreditCard size={36} className="mx-auto mb-3 opacity-30" />
                         <p className="text-sm">Nenhuma matrícula ativa.</p>
                         <Link to="/planos" className="mt-3 inline-block text-gorila-primary text-sm font-semibold hover:underline">Ver planos →</Link>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             )}
 
             {tab === 'ficha'          && <FichaTreinoTab />}
+            {tab === 'dieta'          && <MinhaDietaTab />}
 
             {(['anamnese','checkin','recordes','prontuario','foto-inicial','foto-progresso'] as const).includes(tab as any) && !isLoading && !matriculaAtiva && (
               <div className="mx-4 mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-yellow-600 text-sm">
@@ -782,8 +937,14 @@ export default function PainelAtleta() {
                               <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                                 n.tipo === 'EVENTO' ? 'bg-blue-100 text-blue-700'
                                 : n.tipo === 'COMUNICADO' ? 'bg-purple-100 text-purple-700'
+                                : n.tipo === 'CONVOCACAO' ? 'bg-green-100 text-green-700'
                                 : 'bg-gorila-yellow/20 text-gorila-primary'
-                              }`}>{n.tipo}</span>
+                              }`}>
+                                {n.tipo === 'CONVOCACAO' ? 'Convocação'
+                                  : n.tipo === 'EVENTO' ? 'Evento'
+                                  : n.tipo === 'COMUNICADO' ? 'Comunicado'
+                                  : 'Aviso'}
+                              </span>
                             </div>
                             <p className="text-sm text-gray-600">{n.corpo}</p>
                             <p className="text-[11px] text-gray-400 mt-2">

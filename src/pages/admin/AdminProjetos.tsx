@@ -87,9 +87,8 @@ export default function AdminProjetos() {
         body: formData,
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data?.error ?? 'Erro no upload')
-      const BASE_API_URL = import.meta.env.VITE_API_URL ?? 'https://pressticket.adtecnologia.com.br'
-      setForm(f => ({ ...f, imagemUrl: `${BASE_API_URL}${data.url}` }))
+      if (!res.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Erro no upload')
+      setForm(f => ({ ...f, imagemUrl: data.url }))
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -136,7 +135,7 @@ export default function AdminProjetos() {
     <div className="px-4 py-5 md:p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold mb-1">Projetos Sociais</h1>
+          <h1 className="text-2xl font-bold mb-1">Projetos Culturais</h1>
           <p className="text-zinc-400 text-sm">{items.length} projeto(s)</p>
         </div>
         {!showForm && (

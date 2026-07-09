@@ -399,6 +399,17 @@ export default function Turmas() {
     }
   }
 
+  async function handleDeleteTurma(t: Turma) {
+    if (!confirm(`Excluir a turma "${t.codigo}"? Esta ação não pode ser desfeita.`)) return
+    try {
+      await api.delete(`/admin/turmas/${t.id}`)
+      setTurmas(prev => prev.filter(x => x.id !== t.id))
+      toast.success('Turma excluída.')
+    } catch (e: any) {
+      toast.error(e.message ?? 'Erro ao excluir turma.')
+    }
+  }
+
   function onSalvo(t: Turma) {
     setTurmas(prev => {
       const idx = prev.findIndex(x => x.id === t.id)
@@ -485,6 +496,10 @@ export default function Turmas() {
                         <button onClick={() => setEditando(t)}
                           className="flex items-center gap-1 text-xs text-zinc-400 hover:text-gorila-yellow transition-colors px-2 py-1 rounded hover:bg-zinc-800">
                           <Pencil size={12} /> Editar
+                        </button>
+                        <button onClick={() => handleDeleteTurma(t)}
+                          className="flex items-center gap-1 text-xs text-zinc-400 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-zinc-800">
+                          <Trash2 size={12} /> Excluir
                         </button>
                         <button onClick={() => setAtletasModal(t)}
                           className="flex items-center gap-1 text-xs text-zinc-400 hover:text-blue-400 transition-colors px-2 py-1 rounded hover:bg-zinc-800">

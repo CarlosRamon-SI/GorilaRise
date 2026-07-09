@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,10 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, user, loading } = useAuth();
+
+  const senhaRedefinida = searchParams.get('senha_redefinida') === '1';
 
   // Redirect already-authenticated users to their dashboard
   useEffect(() => {
@@ -102,6 +105,11 @@ const Login = () => {
                   </div>
                 </div>
 
+                {senhaRedefinida && (
+                  <Alert className="border-green-300 bg-green-50">
+                    <AlertDescription className="text-green-700">Senha redefinida com sucesso. Faça login com a nova senha.</AlertDescription>
+                  </Alert>
+                )}
                 {error && (
                   <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
@@ -111,6 +119,12 @@ const Login = () => {
                 <Button type="submit" className="w-full bg-gorila-primary hover:bg-gorila-dark" disabled={isLoading}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
+
+                <div className="text-center">
+                  <Link to="/recuperar-senha" className="text-sm text-gorila-primary hover:underline">
+                    Esqueci minha senha
+                  </Link>
+                </div>
               </form>
 
               <div className="mt-6 text-center space-y-4">

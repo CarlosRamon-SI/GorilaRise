@@ -2,15 +2,29 @@ import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 import { Plus, Pencil, Check, X } from 'lucide-react'
 
+type CategoriaPlano = 'ASSOCIACAO' | 'SOCIO_TORCEDOR' | 'TURMA_REGULAR'
+
 interface Plano {
   id: number
   nome: string
   valor: string
   descricao?: string
   ativo: boolean
+  categoria: CategoriaPlano
 }
 
-const blank = () => ({ nome: '', valor: '', descricao: '' })
+const CATEGORIAS: { value: CategoriaPlano; label: string }[] = [
+  { value: 'ASSOCIACAO', label: 'Associação' },
+  { value: 'SOCIO_TORCEDOR', label: 'Sócio Torcedor' },
+  { value: 'TURMA_REGULAR', label: 'Turmas Regulares' },
+]
+
+// Planos antigos, cadastrados antes do campo categoria existir no back-end, caem em Turmas Regulares.
+function categoriaDe(p: Plano): CategoriaPlano {
+  return p.categoria ?? 'TURMA_REGULAR'
+}
+
+const blank = () => ({ nome: '', valor: '', descricao: '', categoria: 'TURMA_REGULAR' as CategoriaPlano })
 
 export default function AdminPlanos() {
   const [items, setItems] = useState<Plano[]>([])
@@ -29,7 +43,7 @@ export default function AdminPlanos() {
 
   function startEdit(p: Plano) {
     setEditId(p.id)
-    setForm({ nome: p.nome, valor: Number(p.valor).toFixed(2), descricao: p.descricao ?? '' })
+    setForm({ nome: p.nome, valor: Number(p.valor).toFixed(2), descricao: p.descricao ?? '', categoria: categoriaDe(p) })
     setShowForm(true)
     setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -48,7 +62,7 @@ export default function AdminPlanos() {
     if (isNaN(valor) || valor <= 0) { setError('Valor inválido.'); return }
     setSaving(true)
     setError('')
-    const payload = { nome: form.nome, valor, descricao: form.descricao || undefined }
+    const payload = { nome: form.nome, valor, descricao: form.descricao || undefined, categoria: form.categoria }
     try {
       if (editId) {
         const updated = await api.patch<Plano>(`/planos/${editId}`, payload)
@@ -126,6 +140,15 @@ export default function AdminPlanos() {
           </div>
 
           <div>
+            <label className="text-xs text-zinc-400 block mb-1">Categoria</label>
+            <select value={form.categoria}
+              onChange={e => setForm(f => ({ ...f, categoria: e.target.value as CategoriaPlano }))}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400">
+              {CATEGORIAS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </div>
+
+          <div>
             <label className="text-xs text-zinc-400 block mb-1">Descrição <span className="text-zinc-600">(opcional — benefícios do plano)</span></label>
             <textarea rows={2} value={form.descricao}
               onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
@@ -159,39 +182,50 @@ export default function AdminPlanos() {
           <p className="text-zinc-400">Nenhum plano cadastrado ainda.</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {items.map((p, i) => (
-            <div key={p.id}
-              className={`relative rounded-xl p-6 bg-gradient-to-br ${levelColors[i % levelColors.length]} border border-white/10 ${!p.ativo ? 'opacity-50' : ''}`}>
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="font-bold text-white">{p.nome}</h3>
-                <button onClick={() => toggleAtivo(p)}
-                  className={`text-xs px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
-                    p.ativo
-                      ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30'
-                      : 'bg-zinc-700/50 text-zinc-400 border-zinc-600 hover:bg-zinc-600/50'
-                  }`}>
-                  {p.ativo ? 'Ativo' : 'Inativo'}
-                </button>
+        <div className="space-y-8">
+          {CATEGORIAS.map(cat => {
+            const planosCategoria = items.filter(p => categoriaDe(p) === cat.value)
+            if (planosCategoria.length === 0) return null
+            return (
+              <div key={cat.value}>
+                <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">{cat.label}</h2>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {planosCategoria.map((p, i) => (
+                    <div key={p.id}
+                      className={`relative rounded-xl p-6 bg-gradient-to-br ${levelColors[i % levelColors.length]} border border-white/10 ${!p.ativo ? 'opacity-50' : ''}`}>
+                      <div className="flex items-start justify-between mb-4">
+                        <h3 className="font-bold text-white">{p.nome}</h3>
+                        <button onClick={() => toggleAtivo(p)}
+                          className={`text-xs px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                            p.ativo
+                              ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-green-500/30'
+                              : 'bg-zinc-700/50 text-zinc-400 border-zinc-600 hover:bg-zinc-600/50'
+                          }`}>
+                          {p.ativo ? 'Ativo' : 'Inativo'}
+                        </button>
+                      </div>
+
+                      <p className="text-3xl font-black text-yellow-400 mb-1">
+                        R$ {Number(p.valor).toFixed(2).replace('.', ',')}
+                      </p>
+                      <p className="text-white/50 text-xs mb-4">/mês</p>
+
+                      {p.descricao && (
+                        <p className="text-white/70 text-xs leading-relaxed border-t border-white/10 pt-3">
+                          {p.descricao}
+                        </p>
+                      )}
+
+                      <button onClick={() => startEdit(p)}
+                        className="absolute bottom-4 right-4 p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-
-              <p className="text-3xl font-black text-yellow-400 mb-1">
-                R$ {Number(p.valor).toFixed(2).replace('.', ',')}
-              </p>
-              <p className="text-white/50 text-xs mb-4">/mês</p>
-
-              {p.descricao && (
-                <p className="text-white/70 text-xs leading-relaxed border-t border-white/10 pt-3">
-                  {p.descricao}
-                </p>
-              )}
-
-              <button onClick={() => startEdit(p)}
-                className="absolute bottom-4 right-4 p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
-                <Pencil size={14} />
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
