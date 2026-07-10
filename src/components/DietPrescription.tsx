@@ -1,18 +1,42 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { User, Calculator, Target, Save, Check } from 'lucide-react';
+import { User, Calculator, Target, Save, Check, Info } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 
 interface DietPrescriptionProps {
   userName?: string;
   atletaId?: number;
+}
+
+interface DadosAtleta {
+  idade: number | null;
+  sexo: string | null;
+  sexoAtualizadoEm: string | null;
+  peso: string | null;
+  altura: string | null;
+  biometriaAtualizadoEm: string | null;
+  modalidadeEsportiva: string | null;
+  matriculaDesde: string | null;
+}
+
+const SEXO_MAP: Record<string, string> = { Masculino: 'masculino', Feminino: 'feminino' };
+
+// "75,5" ou "75.5kg" -> "75.5". Retorna '' se não achar número.
+function toNumberString(v?: string | null): string {
+  if (!v) return '';
+  const n = parseFloat(v.replace(',', '.'));
+  return isNaN(n) ? '' : String(n);
+}
+
+function formatData(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleDateString('pt-BR') : '';
 }
 
 const DietPrescription = ({ userName, atletaId }: DietPrescriptionProps) => {
@@ -32,11 +56,37 @@ const DietPrescription = ({ userName, atletaId }: DietPrescriptionProps) => {
   const [prescription, setPrescription] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [dadosAtleta, setDadosAtleta] = useState<DadosAtleta | null>(null);
+  const [loadingDados, setLoadingDados] = useState(false);
 
   const modalidadesEsportivas = [
-    'Atletismo', 'Boxe', 'Futebol', 'Vôlei', 'Basquete', 'Natação', 
+    'Atletismo', 'Boxe', 'Futebol', 'Vôlei', 'Basquete', 'Natação',
     'Musculação', 'CrossFit', 'Ciclismo', 'Corrida', 'Outro'
   ];
+
+  // Inclui a modalidade real da matrícula do atleta na lista, caso não esteja nas fixas
+  const opcoesModalidade = dadosAtleta?.modalidadeEsportiva && !modalidadesEsportivas.includes(dadosAtleta.modalidadeEsportiva)
+    ? [dadosAtleta.modalidadeEsportiva, ...modalidadesEsportivas]
+    : modalidadesEsportivas;
+
+  useEffect(() => {
+    if (!atletaId) { setDadosAtleta(null); return; }
+    setLoadingDados(true);
+    api.get<DadosAtleta>(`/dieta/dados-atleta/${atletaId}`)
+      .then(dados => {
+        setDadosAtleta(dados);
+        setFormData(prev => ({
+          ...prev,
+          idade: dados.idade != null ? String(dados.idade) : prev.idade,
+          sexo: dados.sexo ? (SEXO_MAP[dados.sexo] ?? prev.sexo) : prev.sexo,
+          peso: toNumberString(dados.peso) || prev.peso,
+          altura: toNumberString(dados.altura) || prev.altura,
+          modalidadeEsportiva: dados.modalidadeEsportiva ?? prev.modalidadeEsportiva,
+        }));
+      })
+      .catch(() => setDadosAtleta(null))
+      .finally(() => setLoadingDados(false));
+  }, [atletaId]);
 
   const calculateDiet = () => {
     const peso = parseFloat(formData.peso);
@@ -195,7 +245,37 @@ const DietPrescription = ({ userName, atletaId }: DietPrescriptionProps) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gorila-primary">Dados Pessoais</h3>
-              
+
+              {atletaId && (
+                <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded p-2.5 text-xs text-blue-800">
+                  <Info size={14} className="mt-0.5 shrink-0" />
+                  {loadingDados ? (
+                    <span>Carregando dados já cadastrados do atleta...</span>
+                  ) : dadosAtleta ? (
+                    <div className="space-y-0.5">
+                      <p>Peso/altura, sexo e idade pré-preenchidos a partir da ficha do atleta — confira antes de gerar.</p>
+                      <ul className="text-[11px] text-blue-700 space-y-0.5">
+                        {dadosAtleta.biometriaAtualizadoEm ? (
+                          <li>Peso/altura (biometria): atualizado em {formatData(dadosAtleta.biometriaAtualizadoEm)}</li>
+                        ) : (
+                          <li>Peso/altura: não cadastrado na biometria — preencha manualmente</li>
+                        )}
+                        {dadosAtleta.sexoAtualizadoEm ? (
+                          <li>Sexo (anamnese): atualizado em {formatData(dadosAtleta.sexoAtualizadoEm)}</li>
+                        ) : (
+                          <li>Sexo: não informado na anamnese — preencha manualmente</li>
+                        )}
+                        {dadosAtleta.modalidadeEsportiva && dadosAtleta.matriculaDesde && (
+                          <li>Modalidade (matrícula ativa desde {formatData(dadosAtleta.matriculaDesde)}): {dadosAtleta.modalidadeEsportiva}</li>
+                        )}
+                      </ul>
+                    </div>
+                  ) : (
+                    <span>Não foi possível carregar dados cadastrados do atleta — preencha manualmente.</span>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="peso">Peso (kg)</Label>
@@ -281,7 +361,7 @@ const DietPrescription = ({ userName, atletaId }: DietPrescriptionProps) => {
                     <SelectValue placeholder="Selecione sua modalidade" />
                   </SelectTrigger>
                   <SelectContent>
-                    {modalidadesEsportivas.map((modalidade) => (
+                    {opcoesModalidade.map((modalidade) => (
                       <SelectItem key={modalidade} value={modalidade}>{modalidade}</SelectItem>
                     ))}
                   </SelectContent>
