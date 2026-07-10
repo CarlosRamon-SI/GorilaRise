@@ -4,6 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Trophy, Plus, Trash2, Percent, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 interface Recorde {
   id: number
@@ -35,6 +45,7 @@ export default function TabRecordes() {
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
   useEffect(() => {
     api.get<Recorde[]>('/recordes')
@@ -149,7 +160,16 @@ export default function TabRecordes() {
                     return (
                       <Fragment key={r.id}>
                         <tr className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                          <td className="py-2.5 px-2 font-medium">{r.exercicio}</td>
+                          <td className="py-2.5 px-2 font-medium">
+                            <div>{r.exercicio}</div>
+                            {parsed && (
+                              <button onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                                className="mt-0.5 flex items-center gap-1 text-[11px] text-gray-400 hover:text-gorila-primary transition-colors font-normal">
+                                {isExpanded ? <ChevronUp size={11} /> : <Percent size={11} />}
+                                {isExpanded ? 'Ocultar %' : 'Ver %'}
+                              </button>
+                            )}
+                          </td>
                           <td className="py-2.5 px-2">
                             <span className="bg-gorila-yellow/20 text-gorila-primary font-bold text-xs px-2 py-0.5 rounded-full">{r.carga}</span>
                           </td>
@@ -157,19 +177,10 @@ export default function TabRecordes() {
                             {new Date(r.data).toLocaleDateString('pt-BR')}
                           </td>
                           <td className="py-2.5 px-2 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {parsed && (
-                                <button onClick={() => setExpandedId(isExpanded ? null : r.id)}
-                                  className="text-gray-300 hover:text-gorila-primary transition-colors"
-                                  title="Tabela de percentuais">
-                                  {isExpanded ? <ChevronUp size={14} /> : <Percent size={13} />}
-                                </button>
-                              )}
-                              <button onClick={() => handleDelete(r.id)} disabled={deletingId === r.id}
-                                className="text-gray-300 hover:text-red-400 transition-colors">
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
+                            <button onClick={() => setConfirmDeleteId(r.id)} disabled={deletingId === r.id}
+                              className="text-gray-300 hover:text-red-400 transition-colors">
+                              <Trash2 size={13} />
+                            </button>
                           </td>
                         </tr>
                         {isExpanded && parsed && (
@@ -200,6 +211,29 @@ export default function TabRecordes() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={confirmDeleteId !== null} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover recorde?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação não pode ser desfeita. O recorde será removido permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmDeleteId !== null) handleDelete(confirmDeleteId)
+                setConfirmDeleteId(null)
+              }}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

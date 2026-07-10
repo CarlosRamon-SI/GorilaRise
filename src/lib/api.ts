@@ -30,7 +30,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       ...options,
       signal: options.signal ?? controller.signal,
       headers: {
-        'Content-Type': 'application/json',
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
