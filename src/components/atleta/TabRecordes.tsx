@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Trophy, Plus, Trash2 } from 'lucide-react'
+import { Trophy, Plus, Trash2, Percent, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Recorde {
@@ -12,6 +12,21 @@ interface Recorde {
   data: string
 }
 
+const PERCENTUAIS = [10, 20, 30, 40, 50, 60, 70, 80, 90]
+
+// "80kg" -> { valor: 80, unidade: "kg" }. Retorna null se carga não tiver uma parte numérica (ex: tempo "3:45").
+function parseCarga(carga: string): { valor: number; unidade: string } | null {
+  const match = carga.trim().match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/)
+  if (!match) return null
+  const valor = parseFloat(match[1].replace(',', '.'))
+  if (isNaN(valor)) return null
+  return { valor, unidade: match[2].trim() }
+}
+
+function formatValor(valor: number): string {
+  return valor % 1 === 0 ? String(valor) : valor.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')
+}
+
 export default function TabRecordes() {
   const [items, setItems] = useState<Recorde[]>([])
   const [loading, setLoading] = useState(true)
@@ -19,6 +34,7 @@ export default function TabRecordes() {
   const [form, setForm] = useState({ exercicio: '', carga: '', data: new Date().toISOString().slice(0, 10) })
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [expandedId, setExpandedId] = useState<number | null>(null)
 
   useEffect(() => {
     api.get<Recorde[]>('/recordes')
@@ -35,6 +51,7 @@ export default function TabRecordes() {
       setItems(prev => [novo, ...prev])
       setShowForm(false)
       setForm({ exercicio: '', carga: '', data: new Date().toISOString().slice(0, 10) })
+      setExpandedId(parseCarga(novo.carga) ? novo.id : null)
       toast.success('Recorde registrado!')
     } catch {
       toast.error('Erro ao salvar recorde.')
@@ -126,23 +143,57 @@ export default function TabRecordes() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map(r => (
-                    <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <td className="py-2.5 px-2 font-medium">{r.exercicio}</td>
-                      <td className="py-2.5 px-2">
-                        <span className="bg-gorila-yellow/20 text-gorila-primary font-bold text-xs px-2 py-0.5 rounded-full">{r.carga}</span>
-                      </td>
-                      <td className="py-2.5 px-2 text-gray-500 text-xs">
-                        {new Date(r.data).toLocaleDateString('pt-BR')}
-                      </td>
-                      <td className="py-2.5 px-2 text-right">
-                        <button onClick={() => handleDelete(r.id)} disabled={deletingId === r.id}
-                          className="text-gray-300 hover:text-red-400 transition-colors">
-                          <Trash2 size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map(r => {
+                    const parsed = parseCarga(r.carga)
+                    const isExpanded = expandedId === r.id
+                    return (
+                      <Fragment key={r.id}>
+                        <tr className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                          <td className="py-2.5 px-2 font-medium">{r.exercicio}</td>
+                          <td className="py-2.5 px-2">
+                            <span className="bg-gorila-yellow/20 text-gorila-primary font-bold text-xs px-2 py-0.5 rounded-full">{r.carga}</span>
+                          </td>
+                          <td className="py-2.5 px-2 text-gray-500 text-xs">
+                            {new Date(r.data).toLocaleDateString('pt-BR')}
+                          </td>
+                          <td className="py-2.5 px-2 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {parsed && (
+                                <button onClick={() => setExpandedId(isExpanded ? null : r.id)}
+                                  className="text-gray-300 hover:text-gorila-primary transition-colors"
+                                  title="Tabela de percentuais">
+                                  {isExpanded ? <ChevronUp size={14} /> : <Percent size={13} />}
+                                </button>
+                              )}
+                              <button onClick={() => handleDelete(r.id)} disabled={deletingId === r.id}
+                                className="text-gray-300 hover:text-red-400 transition-colors">
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded && parsed && (
+                          <tr className="border-b border-gray-50 bg-gray-50/60">
+                            <td colSpan={4} className="py-3 px-2">
+                              <div className="text-xs text-gray-500 font-medium mb-2">
+                                Percentuais de {formatValor(parsed.valor)}{parsed.unidade} — {r.exercicio}
+                              </div>
+                              <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
+                                {PERCENTUAIS.map(pct => (
+                                  <div key={pct} className="bg-white border border-gray-200 rounded-md px-2 py-1.5 text-center">
+                                    <div className="text-[10px] text-gray-400 font-medium">{pct}%</div>
+                                    <div className="text-xs font-bold text-gorila-primary">
+                                      {formatValor((parsed.valor * pct) / 100)}{parsed.unidade}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
