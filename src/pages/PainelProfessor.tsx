@@ -7,6 +7,16 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
@@ -14,7 +24,7 @@ import DietPrescription from '@/components/DietPrescription'
 import {
   LayoutDashboard, Users, Dumbbell, CheckCircle, FileText,
   LogOut, ChevronRight, Target, BarChart3, Shield, Plus, Trash2,
-  Calendar, Trophy, AlertCircle, Salad, Pencil, Camera, GraduationCap, XCircle, Loader2, Check,
+  Calendar, Trophy, AlertCircle, Salad, Pencil, Camera, GraduationCap, XCircle, Loader2, Check, X,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -1087,6 +1097,10 @@ interface FotoProgresso {
 function TabDesempenho({ atletas }: { atletas: Atleta[] }) {
   const [atletaId, setAtletaId] = useState<number | null>(null)
   const [subTab, setSubTab] = useState<'recordes' | 'fotos'>('recordes')
+  const [lightbox, setLightbox] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const queryClient = useQueryClient()
 
   const { data: recordes = [], isLoading } = useQuery<Recorde[]>({
     queryKey: ['professor-recordes', atletaId],
@@ -1100,6 +1114,19 @@ function TabDesempenho({ atletas }: { atletas: Atleta[] }) {
     enabled: !!atletaId && subTab === 'fotos',
     retry: false,
   })
+
+  async function handleDeleteFoto(id: number) {
+    setDeletingId(id)
+    try {
+      await api.delete(`/fotos-progresso/${id}`)
+      queryClient.setQueryData<FotoProgresso[]>(['professor-fotos', atletaId], prev => prev?.filter(f => f.id !== id) ?? [])
+      toast.success('Foto removida. O atleta foi notificado.')
+    } catch (e: any) {
+      toast.error(e.message ?? 'Erro ao remover foto.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const atletaSelected = atletas.find(a => a.id === atletaId)
 
@@ -1184,14 +1211,14 @@ function TabDesempenho({ atletas }: { atletas: Atleta[] }) {
                 <p className="text-xs text-gray-500 mb-3">{fotos.length} foto{fotos.length !== 1 ? 's' : ''} de <strong>{atletaSelected?.nome}</strong></p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {fotos.map(f => (
-                    <div key={f.id} className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                      <img src={f.url} alt={f.tipo} className="w-full aspect-[3/4] object-cover" />
-                      <div className="px-2 py-1.5">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${f.tipo === 'INICIAL' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                          {f.tipo === 'INICIAL' ? 'Foto Inicial' : '24 Semanas'}
-                        </span>
-                        <p className="text-[10px] text-gray-400 mt-0.5">{new Date(f.criadoEm).toLocaleDateString('pt-BR')}</p>
-                      </div>
+                    <div key={f.id} className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50 relative group">
+                      <img src={f.url} alt="Foto de progresso" onClick={() => setLightbox(f.url)}
+                        className="w-full aspect-[3/4] object-cover cursor-zoom-in" />
+                      <p className="text-[10px] text-gray-400 px-2 py-1.5">{new Date(f.criadoEm).toLocaleDateString('pt-BR')}</p>
+                      <button onClick={() => setConfirmDeleteId(f.id)} disabled={deletingId === f.id}
+                        className="absolute top-1 right-1 bg-black/60 hover:bg-red-500 text-white rounded-full p-1.5 transition-colors">
+                        <Trash2 size={13} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1200,6 +1227,39 @@ function TabDesempenho({ atletas }: { atletas: Atleta[] }) {
           )}
         </CardContent>
       </Card>
+
+      {lightbox && (
+        <div onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out">
+          <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 text-white/80 hover:text-white">
+            <X size={28} />
+          </button>
+          <img src={lightbox} alt="Foto de progresso ampliada" className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg" />
+        </div>
+      )}
+
+      <AlertDialog open={confirmDeleteId !== null} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover foto de progresso?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O atleta será notificado da remoção. Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmDeleteId !== null) handleDeleteFoto(confirmDeleteId)
+                setConfirmDeleteId(null)
+              }}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

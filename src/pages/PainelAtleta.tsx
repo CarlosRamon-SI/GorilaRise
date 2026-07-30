@@ -81,8 +81,7 @@ const MENU = [
   { id: 'checkin',        label: 'Check-in',           short: 'Check-in', icon: CheckCircle },
   { id: 'recordes',       label: 'Recordes Pessoais',  short: 'Records',  icon: Trophy },
   { id: 'prontuario',     label: 'Prontuário',         short: 'Prontu.',  icon: Activity },
-  { id: 'foto-inicial',   label: 'Foto Inicial',       short: 'Foto Ini', icon: Camera },
-  { id: 'foto-progresso', label: 'Foto 24 Semanas',    short: 'Foto 24s', icon: Camera },
+  { id: 'fotos',          label: 'Fotos de Progresso', short: 'Fotos',    icon: Camera },
   { id: 'vantagens',      label: 'Clube de Vantagens', short: 'Vantagens', icon: Gift },
   { id: 'notificacoes',   label: 'Notificações',       short: 'Avisos',   icon: Bell },
   { id: 'cronometro',     label: 'Cronômetro',         short: 'Timer',    icon: Clock },
@@ -900,7 +899,7 @@ export default function PainelAtleta() {
             {tab === 'ficha'          && <FichaTreinoTab />}
             {tab === 'dieta'          && <MinhaDietaTab />}
 
-            {(['anamnese','checkin','recordes','prontuario','foto-inicial','foto-progresso'] as const).includes(tab as any) && !isLoading && !matriculaAtiva && (
+            {(['anamnese','checkin','recordes','prontuario','fotos'] as const).includes(tab as any) && !isLoading && !matriculaAtiva && (
               <div className="mx-4 mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-yellow-600 text-sm">
                 Esta funcionalidade requer uma matrícula ativa. Fale com a administração do clube.
               </div>
@@ -909,8 +908,7 @@ export default function PainelAtleta() {
             {tab === 'checkin'        && !!matriculaAtiva && <TabCheckin />}
             {tab === 'recordes'       && !!matriculaAtiva && <TabRecordes />}
             {tab === 'prontuario'     && !!matriculaAtiva && <TabProntuario />}
-            {tab === 'foto-inicial'   && !!matriculaAtiva && <TabFotos tipo="INICIAL" />}
-            {tab === 'foto-progresso' && !!matriculaAtiva && <TabFotos tipo="PROGRESSO" />}
+            {tab === 'fotos'          && !!matriculaAtiva && <TabFotos />}
             {tab === 'cronometro'     && <TimerSystem />}
             {tab === 'vantagens'      && <TabVantagens />}
 

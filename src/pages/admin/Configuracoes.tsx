@@ -96,6 +96,7 @@ function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: s
 
 export default function Configuracoes() {
   const [config, setConfig] = useState<Configuracoes>(emptyConfig())
+  const [savedConfig, setSavedConfig] = useState<Configuracoes | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -111,17 +112,23 @@ export default function Configuracoes() {
 
   useEffect(() => {
     api.get<Configuracoes>('/admin/configuracoes')
-      .then(data => setConfig(prev => ({
-        ...prev,
-        ...data,
-        smtpSenha: '',
-        gmailClientSecret: '',
-        gmailRefreshToken: '',
-        horarios: { ...emptyConfig().horarios, ...data.horarios },
-      })))
+      .then(data => {
+        const merged = {
+          ...emptyConfig(),
+          ...data,
+          smtpSenha: '',
+          gmailClientSecret: '',
+          gmailRefreshToken: '',
+          horarios: { ...emptyConfig().horarios, ...data.horarios },
+        }
+        setConfig(merged)
+        setSavedConfig(merged)
+      })
       .catch(err => setError(err.message ?? 'Erro ao carregar configurações.'))
       .finally(() => setLoading(false))
   }, [])
+
+  const isDirty = savedConfig === null || JSON.stringify(config) !== JSON.stringify(savedConfig)
 
   // Auto-clear success banner after 3s without leaking a timer
   useEffect(() => {
@@ -153,6 +160,7 @@ export default function Configuracoes() {
       if (!payload.gmailRefreshToken) delete (payload as Partial<Configuracoes>).gmailRefreshToken
       await api.patch('/admin/configuracoes', payload)
       setSuccess(true)
+      setSavedConfig(config)
     } catch (err: any) {
       setError(err.message ?? 'Erro ao salvar configurações')
     } finally {
@@ -205,19 +213,19 @@ export default function Configuracoes() {
     <>
     <form onSubmit={handleSubmit} className="p-8 space-y-6">
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header — fixo no topo para o botão de salvar ficar sempre acessível */}
+      <div className="sticky top-0 z-30 -mx-8 px-8 py-4 bg-zinc-950/95 backdrop-blur-sm border-b border-zinc-800/60 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold mb-1">Configurações Gerais</h1>
           <p className="text-zinc-400 text-sm">Endereço, contato, horários e redes sociais do estabelecimento</p>
         </div>
         <button
           type="submit"
-          disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 bg-yellow-400 text-zinc-900 font-semibold rounded-lg hover:bg-yellow-300 transition-colors disabled:opacity-50"
+          disabled={saving || !isDirty}
+          className="flex items-center gap-2 px-5 py-2.5 bg-yellow-400 text-zinc-900 font-semibold rounded-lg hover:bg-yellow-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
         >
           <Save size={16} />
-          {saving ? 'Salvando...' : 'Salvar Configurações'}
+          {saving ? 'Salvando...' : isDirty ? 'Salvar Configurações' : 'Sem alterações'}
         </button>
       </div>
 
@@ -491,8 +499,8 @@ export default function Configuracoes() {
             <span className={`absolute top-0.5 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform ${config.permitirAlteracaoFotos ? 'translate-x-[18px]' : 'translate-x-[2px]'}`} />
           </button>
           <div>
-            <p className={`text-sm font-medium ${config.permitirAlteracaoFotos ? 'text-white' : 'text-zinc-500'}`}>Permitir envio de fotos de progresso</p>
-            <p className="text-xs text-zinc-600">Quando desativado, atletas não podem enviar novas fotos de progresso</p>
+            <p className={`text-sm font-medium ${config.permitirAlteracaoFotos ? 'text-white' : 'text-zinc-500'}`}>Permitir exclusão de fotos de progresso</p>
+            <p className="text-xs text-zinc-600">Quando desativado, atletas podem registrar novas fotos normalmente, mas não podem excluir fotos já enviadas</p>
           </div>
         </div>
       </section>

@@ -223,7 +223,7 @@ export default function AdminLayout() {
   if (!isLoggedIn || user?.role === 'ATLETA' || user?.role === 'SOCIO_TORCEDOR') return null
 
   return (
-    <div className="flex min-h-screen bg-zinc-950 text-white">
+    <div className="flex h-screen overflow-hidden bg-zinc-950 text-white">
 
       {/* ── Mobile top bar ─────────────────────────────────────────────── */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 h-12 bg-zinc-900 border-b border-zinc-800 flex items-center px-4 gap-3">
