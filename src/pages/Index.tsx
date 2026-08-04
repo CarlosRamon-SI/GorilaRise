@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PatrocinadoresSection from '@/components/PatrocinadoresSection';
@@ -8,11 +9,17 @@ import TestModal from '@/components/TestModal';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Users, Dumbbell, ShoppingBag, Gift, Building, MapPin, Clock, Bell, CheckCircle2 } from 'lucide-react';
+import { Trophy, Users, Dumbbell, ShoppingBag, Gift, Building, MapPin, Clock, Bell, CheckCircle2, CalendarX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+
+interface Evento {
+  id: number; titulo: string; descricao: string; data: string; local: string; imagemUrl: string | null
+}
+
+const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 const Index = () => {
   const [notifOpen, setNotifOpen] = useState(false);
@@ -40,50 +47,11 @@ const Index = () => {
     }
   };
 
-  const upcomingEvents = [
-    {
-      day: '12', month: 'Abr', time: '09:00', type: 'Torneio',
-      typeColor: 'bg-amber-500',
-      title: 'Torneio Interno de Futevôlei',
-      description: 'Disputa entre equipes do clube em categoria livre. Inscrições abertas até 10/04.',
-      location: 'Quadra Principal',
-    },
-    {
-      day: '19', month: 'Abr', time: '10:00', type: 'Workshop',
-      typeColor: 'bg-blue-500',
-      title: 'Workshop — LPO Módulo 2',
-      description: 'Continuação do módulo de Levantamento de Peso Olímpico com foco em snatch.',
-      location: 'Box Gorila Rise',
-    },
-    {
-      day: '26', month: 'Abr', time: '14:00', type: 'Social',
-      typeColor: 'bg-purple-500',
-      title: 'Rise Kids — Dia do Atleta',
-      description: 'Tarde esportiva e cultural para crianças e jovens do projeto social.',
-      location: 'Área Externa',
-    },
-    {
-      day: '03', month: 'Mai', time: '08:00', type: 'Treino',
-      typeColor: 'bg-green-600',
-      title: 'Treino Funcional Coletivo',
-      description: 'Treino aberto para todos os membros. Traga sua equipe e venha suar!',
-      location: 'Box Gorila Rise',
-    },
-    {
-      day: '10', month: 'Mai', time: '19:00', type: 'Palestra',
-      typeColor: 'bg-sky-500',
-      title: 'Saúde Mental no Esporte',
-      description: 'Bate-papo com psicólogo esportivo sobre performance e equilíbrio emocional.',
-      location: 'Sala de Eventos',
-    },
-    {
-      day: '17', month: 'Mai', time: '09:00', type: 'Campeonato',
-      typeColor: 'bg-red-500',
-      title: 'Campeonato Interno — Crossfit',
-      description: 'Competição interna com três categorias: iniciante, intermediário e Rx.',
-      location: 'Box Gorila Rise',
-    },
-  ];
+  const { data: upcomingEvents = [], isLoading: eventosLoading } = useQuery<Evento[]>({
+    queryKey: ['eventos-home'],
+    queryFn: () => api.get('/eventos?ativo=true'),
+    retry: false,
+  });
 
   return (
     <div className="min-h-screen bg-white">
@@ -172,41 +140,63 @@ const Index = () => {
               <h2 className="text-4xl font-bold text-white mb-3">Próximos Eventos</h2>
               <p className="text-gorila-yellow font-semibold">Fique por dentro da agenda do bando</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {upcomingEvents.map((event, index) => (
-                <div
-                  key={index}
-                  className="bg-gorila-dark rounded-xl overflow-hidden hover:scale-[1.02] hover:shadow-xl transition-all duration-200"
-                >
-                  {/* Date + type bar */}
-                  <div className="bg-gorila-yellow px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="text-center leading-none">
-                        <span className="text-3xl font-black text-gorila-primary">{event.day}</span>
-                        <p className="text-xs font-bold text-gorila-primary uppercase tracking-wider">{event.month}</p>
+            {eventosLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="bg-gorila-dark rounded-xl h-48 animate-pulse" />
+                ))}
+              </div>
+            ) : upcomingEvents.length === 0 ? (
+              <div className="text-center py-12 text-gray-300">
+                <CalendarX size={40} className="mx-auto mb-3 opacity-50" />
+                <p>Nenhum evento programado no momento. Fique de olho, em breve teremos novidades!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {upcomingEvents.map((event) => {
+                  const dataEvento = new Date(event.data);
+                  return (
+                    <div
+                      key={event.id}
+                      className="bg-gorila-dark rounded-xl overflow-hidden hover:scale-[1.02] hover:shadow-xl transition-all duration-200"
+                    >
+                      {/* Date + time bar */}
+                      <div className="bg-gorila-yellow px-4 py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="text-center leading-none">
+                            <span className="text-3xl font-black text-gorila-primary">{dataEvento.getDate().toString().padStart(2, '0')}</span>
+                            <p className="text-xs font-bold text-gorila-primary uppercase tracking-wider">{MESES[dataEvento.getMonth()]}</p>
+                          </div>
+                          <div className="w-px h-9 bg-gorila-primary/20" />
+                          <div className="flex items-center gap-1 text-gorila-primary">
+                            <Clock size={13} />
+                            <span className="text-sm font-semibold">
+                              {dataEvento.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                        <Badge className="bg-gorila-primary text-white border-0 text-xs">
+                          Evento
+                        </Badge>
                       </div>
-                      <div className="w-px h-9 bg-gorila-primary/20" />
-                      <div className="flex items-center gap-1 text-gorila-primary">
-                        <Clock size={13} />
-                        <span className="text-sm font-semibold">{event.time}</span>
+                      {/* Content */}
+                      <div className="p-5">
+                        <h3 className="text-white font-bold text-base mb-2 leading-snug">{event.titulo}</h3>
+                        {event.descricao && (
+                          <p className="text-gray-400 text-sm mb-4 leading-relaxed">{event.descricao}</p>
+                        )}
+                        {event.local && (
+                          <div className="flex items-center gap-1.5 text-gray-500 text-xs">
+                            <MapPin size={12} />
+                            <span>{event.local}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <Badge className={`${event.typeColor} text-white border-0 text-xs`}>
-                      {event.type}
-                    </Badge>
-                  </div>
-                  {/* Content */}
-                  <div className="p-5">
-                    <h3 className="text-white font-bold text-base mb-2 leading-snug">{event.title}</h3>
-                    <p className="text-gray-400 text-sm mb-4 leading-relaxed">{event.description}</p>
-                    <div className="flex items-center gap-1.5 text-gray-500 text-xs">
-                      <MapPin size={12} />
-                      <span>{event.location}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* CTA notificações */}
             <div className="text-center mt-10">

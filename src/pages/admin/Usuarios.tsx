@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { calcForca, validarCPF } from '@/lib/validators'
 import { fmt } from '@/lib/masks'
-import { KeyRound, Loader2, UserPlus, Pencil, X } from 'lucide-react'
+import { KeyRound, Loader2, UserPlus, Pencil, X, AlertTriangle } from 'lucide-react'
 
 interface Usuario {
   id: number
@@ -16,6 +17,7 @@ interface Usuario {
   funcao?: 'PROFESSOR' | 'NUTRICIONISTA' | 'FISIOTERAPEUTA' | null
   ativo: boolean
   criadoEm: string
+  matriculas?: { id: number }[]
 }
 
 // ── Modal: Alterar Senha ───────────────────────────────────────────────────────
@@ -574,6 +576,15 @@ export default function Usuarios() {
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${u.ativo ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-zinc-700 text-zinc-400 border-zinc-600'}`}>
                         {u.ativo ? 'Ativo' : 'Inativo'}
                       </span>
+                    )}
+                    {u.role === 'ATLETA' && (u.matriculas?.length ?? 0) === 0 && (
+                      <Link
+                        to="/admin/matriculas"
+                        title="Este atleta não possui matrícula ativa — anamnese, check-in e outras funcionalidades ficam bloqueadas até criar uma."
+                        className="flex items-center gap-1 text-[11px] text-amber-500 hover:text-amber-400 hover:underline mt-1"
+                      >
+                        <AlertTriangle size={11} /> Sem matrícula
+                      </Link>
                     )}
                   </td>
                   <td className="px-4 py-3 text-zinc-500 text-xs">

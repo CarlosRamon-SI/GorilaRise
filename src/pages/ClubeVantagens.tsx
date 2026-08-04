@@ -1,12 +1,31 @@
+import { useQuery } from '@tanstack/react-query';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import GorilaRiseLogo from '@/components/GorilaRiseLogo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Gift, ShoppingBag, Calendar, Utensils, CreditCard, Star, GraduationCap, Heart, Shirt, Home, Gamepad2, Plane, FileText } from 'lucide-react';
+import { Gift, ShoppingBag, Calendar, Utensils, CreditCard, ExternalLink, Tag, Loader2, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { api } from '@/lib/api';
+
+interface Vantagem {
+  id: number
+  empresa: string
+  beneficio: string
+  codigoDesc?: string | null
+  logoUrl?: string | null
+  link?: string | null
+  categoria: string
+}
+
 const ClubeVantagens = () => {
+  const { data: vantagens = [], isLoading: vantagensLoading } = useQuery<Vantagem[]>({
+    queryKey: ['vantagens-publico'],
+    queryFn: () => api.get('/vantagens'),
+    retry: false,
+  });
+  const categorias = [...new Set(vantagens.map(v => v.categoria))].sort();
   const beneficios = [{
     titulo: '25% de Desconto na Loja',
     descricao: 'Desconto especial em todos os produtos da loja oficial',
@@ -23,50 +42,6 @@ const ClubeVantagens = () => {
     icon: Utensils,
     cor: 'bg-orange-100 text-orange-600'
   }];
-  const parceiros = {
-    'Educação e Artigos Escolares': {
-      icon: GraduationCap,
-      estabelecimentos: ['Papelaria Escolar Central', 'Livraria Educacional', 'Material Didático Plus']
-    },
-    'Saúde e Beleza': {
-      icon: Heart,
-      estabelecimentos: ['Nutricionista', 'Psicólogo', 'Fisioterapeuta', 'Endocrinologista', 'Studio de Beleza Simone Oliveira']
-    },
-    'Alimentação e Gastronomia': {
-      icon: Utensils,
-      estabelecimentos: ['Restaurante Fit Life', 'Açaí do Atleta', 'Suplementos Max', 'Lanchonete Saudável']
-    },
-    'Moda e Acessórios': {
-      icon: Shirt,
-      estabelecimentos: ['Dom Felipe - Artigos Masculinos', 'Gibi Store - Loja Streetwear (15% de desconto)', 'Boutique Fashion', 'Acessórios Premium']
-    },
-    'Artigos para Casa': {
-      icon: Home,
-      estabelecimentos: ['Casa & Decoração', 'Móveis Comfort', 'Utilidades Domésticas', 'Design de Interiores']
-    },
-    'Entretenimento': {
-      icon: Gamepad2,
-      estabelecimentos: ['Bem Te Vi - 15% nas aulas de teatro (promoção não se acumula com outras promoções vigentes)', 'Cinema Multiplex', 'Games & Diversão', 'Teatro Municipal']
-    },
-    'Viagens e Turismo': {
-      icon: Plane,
-      estabelecimentos: ['Agência Mundo Viagens', 'Hotel Pousada do Sol', 'Turismo Aventura', 'Pacotes Exclusivos']
-    }
-  };
-  const getIconColor = (categoria: string) => {
-    const colors: {
-      [key: string]: string;
-    } = {
-      'Educação e Artigos Escolares': 'text-blue-600',
-      'Saúde e Beleza': 'text-pink-600',
-      'Alimentação e Gastronomia': 'text-orange-600',
-      'Moda e Acessórios': 'text-purple-600',
-      'Artigos para Casa': 'text-green-600',
-      'Entretenimento': 'text-red-600',
-      'Viagens e Turismo': 'text-cyan-600'
-    };
-    return colors[categoria] || 'text-gorila-primary';
-  };
   return <div className="min-h-screen bg-white">
       <Header />
       
@@ -164,24 +139,59 @@ const ClubeVantagens = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {Object.entries(parceiros).map(([categoria, dados]) => <Card key={categoria} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className={`w-12 h-12 bg-gorila-yellow rounded-full flex items-center justify-center mb-2`}>
-                    <dados.icon className={getIconColor(categoria)} size={24} />
+          {vantagensLoading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 size={28} className="animate-spin text-gorila-primary" />
+            </div>
+          ) : vantagens.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <Gift size={40} className="mx-auto mb-3 opacity-40" />
+              <p>Nenhum parceiro cadastrado no momento. Em breve teremos novidades!</p>
+            </div>
+          ) : (
+            <div className="space-y-10">
+              {categorias.map(categoria => (
+                <div key={categoria}>
+                  <h3 className="text-xl font-bold text-gorila-primary mb-4">{categoria}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {vantagens.filter(v => v.categoria === categoria).map(v => (
+                      <Card key={v.id} className="hover:shadow-lg transition-shadow">
+                        <CardContent className="p-5">
+                          <div className="flex items-start gap-3 mb-3">
+                            {v.logoUrl ? (
+                              <img src={v.logoUrl} alt={v.empresa}
+                                className="w-12 h-12 object-contain rounded-lg border border-gray-100 bg-gray-50 p-1 shrink-0"
+                                onError={e => (e.currentTarget.style.display = 'none')} />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-gorila-yellow flex items-center justify-center shrink-0">
+                                <Gift className="text-gorila-primary" size={22} />
+                              </div>
+                            )}
+                            <p className="font-bold text-gorila-primary leading-tight pt-1">{v.empresa}</p>
+                          </div>
+                          <p className="text-sm text-gray-600">{v.beneficio}</p>
+                          {v.codigoDesc && (
+                            <div className="flex items-center gap-2 mt-3">
+                              <Tag size={12} className="text-gorila-primary shrink-0" />
+                              <span className="font-mono font-bold text-gorila-primary bg-gorila-yellow/20 px-2 py-0.5 rounded text-xs tracking-wider">
+                                {v.codigoDesc}
+                              </span>
+                            </div>
+                          )}
+                          {v.link && (
+                            <a href={v.link} target="_blank" rel="noreferrer"
+                              className="flex items-center gap-1 text-xs text-gorila-primary hover:underline mt-3">
+                              <ExternalLink size={12} /> Ver site
+                            </a>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                  <CardTitle className="text-gorila-primary text-lg">{categoria}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {dados.estabelecimentos.map((estabelecimento, index) => <li key={index} className="text-sm text-gray-600 flex items-start">
-                        <div className="w-2 h-2 bg-gorila-yellow rounded-full mr-2 flex-shrink-0 mt-2"></div>
-                        <span>{estabelecimento}</span>
-                      </li>)}
-                  </ul>
-                </CardContent>
-              </Card>)}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* CTA - Ficha de Inscrição */}
