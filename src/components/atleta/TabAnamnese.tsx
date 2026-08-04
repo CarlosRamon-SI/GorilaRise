@@ -26,6 +26,10 @@ interface AnamneseData {
   frequenciaSemanal: string
   qualidadeSono: string
   consumoAlcool: string
+  alergiasIntolerancias: string
+  restricoesAlimentares: string
+  preferenciasAlimentares: string
+  rotinaAlimentar: string
   termoacceito: boolean
 }
 
@@ -43,7 +47,9 @@ const blank = (): AnamneseData => ({
   objetivos: [], objetivoDescricao: '', doencas: '', medicamentos: '', cirurgias: '',
   problemasArticulares: '', historicoCv: false, tabagismo: false,
   frequenciaBanheiro: '', historicoAtividades: '', frequenciaSemanal: '',
-  qualidadeSono: '', consumoAlcool: '', termoacceito: false,
+  qualidadeSono: '', consumoAlcool: '',
+  alergiasIntolerancias: '', restricoesAlimentares: '', preferenciasAlimentares: '', rotinaAlimentar: '',
+  termoacceito: false,
 })
 
 function Field({ label, value }: { label: string; value: string | boolean }) {
@@ -66,6 +72,23 @@ function InputText({ label, value, onChange, required }: {
         onChange={e => onChange(e.target.value)}
         required={required}
         className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gorila-primary"
+      />
+    </div>
+  )
+}
+
+function TextareaField({ label, value, onChange, placeholder }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string
+}) {
+  return (
+    <div>
+      <label className="block text-xs text-gray-600 mb-1">{label}</label>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={2}
+        className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gorila-primary resize-none"
       />
     </div>
   )
@@ -192,6 +215,15 @@ export default function TabAnamnese({ onSaved }: { onSaved?: () => void } = {}) 
               <Field label="Consumo de álcool" value={saved.consumoAlcool} />
             </div>
           </section>
+          <section>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3">Hábitos Alimentares</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <Field label="Alergias/intolerâncias alimentares" value={saved.alergiasIntolerancias} />
+              <Field label="Restrições alimentares" value={saved.restricoesAlimentares} />
+              <Field label="Preferências alimentares" value={saved.preferenciasAlimentares} />
+              <Field label="Rotina/horários das refeições" value={saved.rotinaAlimentar} />
+            </div>
+          </section>
         </div>
       </CardContent>
     </Card>
@@ -293,6 +325,14 @@ export default function TabAnamnese({ onSaved }: { onSaved?: () => void } = {}) 
                   options={['Ótima','Boa','Regular','Ruim']} />
                 <Select label="Consumo de álcool" value={form.consumoAlcool} onChange={v => set('consumoAlcool', v)}
                   options={['Nunca','Raramente','1–2x por semana','3x ou mais por semana']} />
+              </div>
+              <h4 className="font-medium text-sm text-gorila-primary pt-2">Hábitos Alimentares</h4>
+              <p className="text-xs text-gray-500 -mt-2">Estas informações serão usadas pelo nutricionista na prescrição da dieta.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <TextareaField label="Alergias / intolerâncias alimentares" value={form.alergiasIntolerancias} onChange={v => set('alergiasIntolerancias', v)} placeholder="Ex: Intolerância à lactose, alergia a amendoim..." />
+                <TextareaField label="Restrições alimentares" value={form.restricoesAlimentares} onChange={v => set('restricoesAlimentares', v)} placeholder="Ex: Vegetariano, vegano, low carb..." />
+                <TextareaField label="Preferências alimentares" value={form.preferenciasAlimentares} onChange={v => set('preferenciasAlimentares', v)} placeholder="Ex: Não gosta de peixe, prefere frango..." />
+                <TextareaField label="Rotina / horários das refeições" value={form.rotinaAlimentar} onChange={v => set('rotinaAlimentar', v)} placeholder="Ex: Acorda 6h, treina 7h, almoça 12h..." />
               </div>
             </div>
           )}
