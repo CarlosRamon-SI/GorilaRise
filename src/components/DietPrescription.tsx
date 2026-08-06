@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { User, Calculator, Target, Save, Check, Info, Plus, X, ChevronLeft, ChevronRight, BookmarkPlus, FolderOpen, Utensils } from 'lucide-react';
+import { User, Calculator, Target, Save, Check, Info, Plus, X, ChevronLeft, ChevronRight, BookmarkPlus, FolderOpen, Utensils, Zap } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -276,6 +276,8 @@ const DietPrescription = ({ userName, atletaId }: DietPrescriptionProps) => {
     queryFn: () => api.get('/dieta/modelos'),
   });
 
+  const [modeloSelecionadoId, setModeloSelecionadoId] = useState('');
+
   const carregarModelo = async (id: string) => {
     try {
       const modelo = await api.get<ModeloDietaCompleto>(`/dieta/modelos/${id}`);
@@ -324,6 +326,31 @@ const DietPrescription = ({ userName, atletaId }: DietPrescriptionProps) => {
       toast.success('Modelo salvo na biblioteca!');
     },
     onError: (e: any) => toast.error(e.message ?? 'Erro ao salvar modelo.'),
+  });
+
+  const prescreverDeModelo = useMutation({
+    mutationFn: (modeloId: string) => api.post(`/dieta/modelos/${modeloId}/prescrever`, {
+      atletaId,
+      peso: parseFloat(formData.peso),
+      altura: parseFloat(formData.altura),
+      idade: parseInt(formData.idade, 10),
+      sexo: formData.sexo,
+      nivelAtividade: formData.nivelAtividade,
+      modalidadeEsportiva: formData.modalidadeEsportiva || undefined,
+      objetivo: formData.objetivo,
+      restricoes: formData.restricoes || undefined,
+      calorias: Math.round(Number(formData.calorias)),
+      proteinas: Math.round(Number(formData.proteinas)),
+      carboidratos: Math.round(Number(formData.carboidratos)),
+      gorduras: Math.round(Number(formData.gorduras)),
+      agua: Math.round((parseFloat(formData.peso) || 0) * 35),
+      recomendacao: observacoes || undefined,
+    }),
+    onSuccess: () => {
+      setSaved(true);
+      toast.success('Prescrição criada a partir do modelo! O atleta já pode ver no painel dele.');
+    },
+    onError: (e: any) => toast.error(e.message ?? 'Erro ao prescrever a partir do modelo.'),
   });
 
   const adicionarItem = (mealIndex: number, alimento: Alimento) => {
@@ -629,7 +656,7 @@ const DietPrescription = ({ userName, atletaId }: DietPrescriptionProps) => {
               <div className="flex flex-wrap items-end gap-3 bg-gray-50 border border-gray-200 rounded-lg p-3">
                 <div className="flex-1 min-w-[200px]">
                   <Label className="text-xs flex items-center gap-1"><FolderOpen size={13} /> Carregar modelo</Label>
-                  <Select onValueChange={carregarModelo}>
+                  <Select onValueChange={(id) => { setModeloSelecionadoId(id); carregarModelo(id); }}>
                     <SelectTrigger><SelectValue placeholder="Selecione um modelo salvo" /></SelectTrigger>
                     <SelectContent>
                       {modelos.map(m => (
@@ -638,6 +665,18 @@ const DietPrescription = ({ userName, atletaId }: DietPrescriptionProps) => {
                       {modelos.length === 0 && <div className="px-2 py-1.5 text-xs text-gray-400">Nenhum modelo salvo ainda</div>}
                     </SelectContent>
                   </Select>
+                  {modeloSelecionadoId && atletaId && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 mt-2 w-full text-gorila-primary border-gorila-primary/40"
+                      disabled={prescreverDeModelo.isPending || saved}
+                      onClick={() => prescreverDeModelo.mutate(modeloSelecionadoId)}
+                    >
+                      <Zap size={14} /> {prescreverDeModelo.isPending ? 'Prescrevendo...' : 'Prescrever direto com este modelo'}
+                    </Button>
+                  )}
                 </div>
                 <div className="flex-1 min-w-[200px]">
                   <Label className="text-xs">Salvar dieta atual como modelo</Label>
