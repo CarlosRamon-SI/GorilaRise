@@ -53,6 +53,7 @@ import Turmas from "./pages/admin/Turmas"
 import AdminAnamneses from "./pages/admin/AdminAnamneses"
 import AdminDesempenho from "./pages/admin/AdminDesempenho"
 import AdminEventos from "./pages/admin/AdminEventos"
+import AdminAlimentos from "./pages/admin/AdminAlimentos"
 import ProjetoPage from "./pages/projetos/ProjetoPage";
 import Termos from "./pages/Termos";
 import Privacidade from "./pages/Privacidade";
@@ -122,6 +123,7 @@ const App = () => (
             <Route path="planos" element={<AdminPlanos />} />
             <Route path="matriculas" element={<Matriculas />} />
             <Route path="treinos" element={<Treinos />} />
+            <Route path="alimentos" element={<AdminAlimentos />} />
             <Route path="checkin" element={<CheckinAdmin />} />
             <Route path="turmas" element={<Turmas />} />
             <Route path="ambientes" element={<AdminAmbientes />} />

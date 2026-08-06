@@ -28,6 +28,7 @@ import {
   X,
   CalendarDays,
   MapPin,
+  Apple,
 } from 'lucide-react'
 
 function iniciais(nome: string) {
@@ -60,6 +61,7 @@ const NAV_GROUPS = [
       { to: '/admin/turmas', label: 'Turmas', icon: GraduationCap },
       { to: '/admin/ambientes', label: 'Ambientes', icon: MapPin },
       { to: '/admin/treinos', label: 'Treinos', icon: Dumbbell },
+      { to: '/admin/alimentos', label: 'Alimentos', icon: Apple },
       { to: '/admin/checkin', label: 'Check-in', icon: CalendarCheck },
     ],
   },
