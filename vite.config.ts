@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => ({
     componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: false, // registrado manualmente em main.tsx (virtual:pwa-register), com reload automático quando um SW novo assume
       includeAssets: ["favicon.ico", "icons/*.png"],
       manifest: {
         name: "Gorila Rise - Esporte Clube",

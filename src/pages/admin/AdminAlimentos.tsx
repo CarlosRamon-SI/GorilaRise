@@ -64,6 +64,23 @@ function normalizarTexto(s: unknown): string {
     .trim()
 }
 
+// Nem toda planilha começa com o cabeçalho na linha 1 (pode ter título/observação acima) — testamos
+// as primeiras linhas e escolhemos a que mais "parece" cabeçalho, mas o usuário pode corrigir na tela.
+function detectarLinhaCabecalho(linhas: any[][]): number {
+  const limite = Math.min(linhas.length, 10)
+  let melhorIdx = 0
+  let melhorScore = -1
+  for (let i = 0; i < limite; i++) {
+    const normalizados = (linhas[i] ?? []).map(normalizarTexto)
+    const score = CAMPOS.reduce(
+      (acc, campo) => acc + (normalizados.some(h => campo.sinonimos.some(s => h.includes(s))) ? 1 : 0),
+      0,
+    )
+    if (score > melhorScore) { melhorScore = score; melhorIdx = i }
+  }
+  return melhorIdx
+}
+
 // Sugere, por texto do cabeçalho, qual coluna corresponde a cada campo — o usuário confirma/ajusta antes de importar.
 function sugerirMapeamento(cabecalho: string[]): Record<CampoAlimento, number | ''> {
   const normalizados = cabecalho.map(normalizarTexto)
@@ -109,10 +126,11 @@ export default function AdminAlimentos() {
   const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Etapa de importação: cabeçalho + linhas cruas ficam em memória até o usuário confirmar o mapeamento.
+  // Etapa de importação: a planilha inteira (sem assumir qual linha é o cabeçalho) fica em memória
+  // até o usuário confirmar qual linha é o cabeçalho e o mapeamento de colunas.
   const [mapeando, setMapeando] = useState(false)
-  const [importCabecalho, setImportCabecalho] = useState<string[]>([])
-  const [importLinhasBrutas, setImportLinhasBrutas] = useState<any[][]>([])
+  const [linhasCompletas, setLinhasCompletas] = useState<any[][]>([])
+  const [linhaCabecalhoIdx, setLinhaCabecalhoIdx] = useState(0) // índice 0-based dentro de linhasCompletas
   const [mapeamento, setMapeamento] = useState<Record<CampoAlimento, number | ''>>(mapeamentoVazio())
   const [importando, setImportando] = useState(false)
   const [importResult, setImportResult] = useState<ImportResultado | null>(null)
@@ -205,10 +223,10 @@ export default function AdminAlimentos() {
         toast.error('A planilha precisa ter uma linha de cabeçalho e ao menos uma linha de dados.')
         return
       }
-      const cabecalho = (linhas[0] as any[]).map(c => String(c ?? '').trim())
-      setImportCabecalho(cabecalho)
-      setImportLinhasBrutas(linhas.slice(1))
-      setMapeamento(sugerirMapeamento(cabecalho))
+      const headerIdx = detectarLinhaCabecalho(linhas)
+      setLinhasCompletas(linhas)
+      setLinhaCabecalhoIdx(headerIdx)
+      setMapeamento(sugerirMapeamento((linhas[headerIdx] ?? []).map(c => String(c ?? '').trim())))
       setImportResult(null)
       setMapeando(true)
     } catch (e: any) {
@@ -216,29 +234,49 @@ export default function AdminAlimentos() {
     }
   }
 
+  function selecionarLinhaCabecalho(idx: number) {
+    setLinhaCabecalhoIdx(idx)
+    setMapeamento(sugerirMapeamento((linhasCompletas[idx] ?? []).map(c => String(c ?? '').trim())))
+  }
+
   function cancelarMapeamento() {
     setMapeando(false)
-    setImportCabecalho([])
-    setImportLinhasBrutas([])
+    setLinhasCompletas([])
+    setLinhaCabecalhoIdx(0)
     setMapeamento(mapeamentoVazio())
   }
 
-  // Linhas em branco descartadas depois de calcular a linha real (idx+2) — preserva o número correto mesmo com buracos no meio.
+  const cabecalhoAtual = linhasCompletas[linhaCabecalhoIdx] ?? []
+  const linhasDados = useMemo(
+    () => linhasCompletas.slice(linhaCabecalhoIdx + 1),
+    [linhasCompletas, linhaCabecalhoIdx],
+  )
+
+  // Linhas em branco descartadas depois de calcular a linha real da planilha — preserva o número
+  // correto mesmo com buracos no meio ou quando o cabeçalho não está na linha 1.
   const itensImportacao = useMemo(() => {
-    return importLinhasBrutas
-      .map((r, idx) => ({ linha: idx + 2, r }))
+    return linhasDados
+      .map((r, k) => ({ linha: linhaCabecalhoIdx + k + 2, r }))
       .filter(({ r }) => r.some(c => c !== undefined && String(c).trim() !== ''))
       .map(({ linha, r }) => construirItem(linha, r, mapeamento))
-  }, [importLinhasBrutas, mapeamento])
+  }, [linhasDados, linhaCabecalhoIdx, mapeamento])
 
   const mapeamentoCompleto = CAMPOS.filter(c => c.obrigatorio).every(c => mapeamento[c.chave] !== '')
 
+  // Mostra o texto do cabeçalho + um valor de exemplo da primeira linha de dado — assim o usuário
+  // identifica a coluna certa mesmo se o texto do cabeçalho for ambíguo, vazio ou não for cabeçalho de verdade.
   function opcoesColuna(campoAtual: CampoAlimento) {
-    return importCabecalho.map((h, i) => ({
-      valor: i,
-      label: h ? `${h} (coluna ${i + 1})` : `Coluna ${i + 1} (sem cabeçalho)`,
-      usadaPorOutro: Object.entries(mapeamento).some(([k, v]) => k !== campoAtual && v === i),
-    }))
+    const primeiraLinhaComDado = linhasDados.find(r => r.some(c => c !== undefined && String(c).trim() !== '')) ?? []
+    return cabecalhoAtual.map((h, i) => {
+      const rotulo = String(h ?? '').trim() || `Coluna ${i + 1}`
+      const amostra = primeiraLinhaComDado[i]
+      const temAmostra = amostra !== undefined && String(amostra).trim() !== ''
+      return {
+        valor: i,
+        label: temAmostra ? `${rotulo} — ex: "${String(amostra).trim()}"` : rotulo,
+        usadaPorOutro: Object.entries(mapeamento).some(([k, v]) => k !== campoAtual && v === i),
+      }
+    })
   }
 
   async function confirmarImportacao() {
@@ -308,6 +346,27 @@ export default function AdminAlimentos() {
             <h2 className="font-semibold text-sm text-zinc-200 uppercase tracking-wider">Confira o mapeamento de colunas</h2>
             <p className="text-xs text-zinc-500 mt-1">
               Sugerimos automaticamente pelo texto do cabeçalho — confira ou ajuste cada campo antes de importar.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-xs text-zinc-400 block mb-1">Qual linha da planilha é o cabeçalho?</label>
+            <select
+              value={linhaCabecalhoIdx}
+              onChange={e => selecionarLinhaCabecalho(Number(e.target.value))}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400"
+            >
+              {linhasCompletas.slice(0, 10).map((r, i) => {
+                const resumo = r.filter(c => c !== undefined && String(c).trim() !== '').slice(0, 5).map(c => String(c).trim()).join(' | ')
+                return (
+                  <option key={i} value={i}>
+                    Linha {i + 1}: {resumo || '(vazia)'}
+                  </option>
+                )
+              })}
+            </select>
+            <p className="text-[11px] text-zinc-500 mt-1">
+              Escolha a linha com os nomes das colunas (ex: "Categoria", "Alimento", "Calorias"...). Linhas de título ou observação acima dela são ignoradas.
             </p>
           </div>
 
