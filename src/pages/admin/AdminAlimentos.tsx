@@ -132,11 +132,15 @@ export default function AdminAlimentos() {
       const buf = await file.arrayBuffer()
       const wb = XLSX.read(buf, { type: 'array' })
       const sheet = wb.Sheets[wb.SheetNames[0]]
-      const linhas = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, blankrows: false })
+      // blankrows mantido em true (padrão) para preservar linhas em branco no array —
+      // sem isso, o índice de cada linha se desalinha do número real na planilha.
+      const linhas = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 })
       const itens = linhas
-        .slice(1) // pula o cabeçalho
-        .filter(r => r.some(c => c !== undefined && String(c).trim() !== ''))
-        .map(r => ({
+        .slice(1) // pula o cabeçalho (linha 1)
+        .map((r, idx) => ({ linha: idx + 2, r })) // linha real na planilha, antes de filtrar em branco
+        .filter(({ r }) => r.some(c => c !== undefined && String(c).trim() !== ''))
+        .map(({ linha, r }) => ({
+          linha,
           nome: String(r[0] ?? '').trim(),
           categoria: r[1] ? String(r[1]).trim() : undefined,
           caloriasKcal: Number(r[2]) || 0,
