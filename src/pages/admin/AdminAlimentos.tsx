@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import { Plus, Pencil, Check, X, Trash2, Download, Upload, Search } from 'lucide-react'
+import { Plus, Pencil, Check, X, Trash2, Download, Upload, Search, ArrowRight } from 'lucide-react'
 
 interface Alimento {
   id: number
@@ -19,7 +19,28 @@ interface ImportResultado {
   erros: { linha: number; erro: string }[]
 }
 
+type CampoAlimento = 'nome' | 'categoria' | 'caloriasKcal' | 'carboidratosG' | 'proteinasG' | 'gordurasG'
+
+interface CampoConfig {
+  chave: CampoAlimento
+  label: string
+  obrigatorio: boolean
+  sinonimos: string[]
+}
+
+const CAMPOS: CampoConfig[] = [
+  { chave: 'nome', label: 'Nome do alimento', obrigatorio: true, sinonimos: ['nome do alimento', 'nome', 'alimento', 'descricao'] },
+  { chave: 'categoria', label: 'Categoria', obrigatorio: false, sinonimos: ['categoria', 'grupo', 'classe'] },
+  { chave: 'caloriasKcal', label: 'Calorias (kcal)', obrigatorio: true, sinonimos: ['calorias', 'kcal', 'energia'] },
+  { chave: 'carboidratosG', label: 'Carboidratos (g)', obrigatorio: true, sinonimos: ['carboidratos', 'carboidrato', 'carb'] },
+  { chave: 'proteinasG', label: 'Proteínas (g)', obrigatorio: true, sinonimos: ['proteinas', 'proteina', 'prot'] },
+  { chave: 'gordurasG', label: 'Gorduras (g)', obrigatorio: true, sinonimos: ['gorduras', 'gordura', 'lipidios', 'lipideos', 'gord'] },
+]
+
 const blank = () => ({ nome: '', categoria: '', caloriasKcal: '', carboidratosG: '', proteinasG: '', gordurasG: '' })
+const mapeamentoVazio = (): Record<CampoAlimento, number | ''> => ({
+  nome: '', categoria: '', caloriasKcal: '', carboidratosG: '', proteinasG: '', gordurasG: '',
+})
 
 const COLUNAS_MODELO = ['Nome', 'Categoria', 'Calorias (kcal) por 100g', 'Carboidratos (g) por 100g', 'Proteínas (g) por 100g', 'Gorduras (g) por 100g']
 const LINHA_EXEMPLO = ['Arroz branco cozido', 'Cereais', 128, 28.1, 2.5, 0.2]
@@ -33,6 +54,50 @@ async function baixarModelo() {
   XLSX.writeFile(wb, 'modelo-alimentos.xlsx')
 }
 
+const DIACRITICOS = new RegExp('[\\u0300-\\u036f]', 'g')
+
+function normalizarTexto(s: unknown): string {
+  return String(s ?? '')
+    .normalize('NFD').replace(DIACRITICOS, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+// Sugere, por texto do cabeçalho, qual coluna corresponde a cada campo — o usuário confirma/ajusta antes de importar.
+function sugerirMapeamento(cabecalho: string[]): Record<CampoAlimento, number | ''> {
+  const normalizados = cabecalho.map(normalizarTexto)
+  const usados = new Set<number>()
+  const resultado = mapeamentoVazio()
+  for (const campo of CAMPOS) {
+    let achou: number | '' = ''
+    for (const sinonimo of campo.sinonimos) {
+      const idx = normalizados.findIndex((h, i) => !usados.has(i) && h.includes(sinonimo))
+      if (idx !== -1) { achou = idx; break }
+    }
+    resultado[campo.chave] = achou
+    if (achou !== '') usados.add(achou)
+  }
+  return resultado
+}
+
+function construirItem(linha: number, r: any[], mapeamento: Record<CampoAlimento, number | ''>) {
+  const valorDe = (chave: CampoAlimento) => {
+    const idx = mapeamento[chave]
+    return idx === '' ? undefined : r[idx]
+  }
+  const categoria = valorDe('categoria')
+  return {
+    linha,
+    nome: String(valorDe('nome') ?? '').trim(),
+    categoria: categoria ? String(categoria).trim() : undefined,
+    caloriasKcal: Number(valorDe('caloriasKcal')) || 0,
+    carboidratosG: Number(valorDe('carboidratosG')) || 0,
+    proteinasG: Number(valorDe('proteinasG')) || 0,
+    gordurasG: Number(valorDe('gordurasG')) || 0,
+  }
+}
+
 export default function AdminAlimentos() {
   const [items, setItems] = useState<Alimento[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,9 +107,15 @@ export default function AdminAlimentos() {
   const [editId, setEditId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Etapa de importação: cabeçalho + linhas cruas ficam em memória até o usuário confirmar o mapeamento.
+  const [mapeando, setMapeando] = useState(false)
+  const [importCabecalho, setImportCabecalho] = useState<string[]>([])
+  const [importLinhasBrutas, setImportLinhasBrutas] = useState<any[][]>([])
+  const [mapeamento, setMapeamento] = useState<Record<CampoAlimento, number | ''>>(mapeamentoVazio())
   const [importando, setImportando] = useState(false)
   const [importResult, setImportResult] = useState<ImportResultado | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function carregar(termo?: string) {
     setLoading(true)
@@ -120,43 +191,71 @@ export default function AdminAlimentos() {
     }
   }
 
-  async function importarArquivo(e: React.ChangeEvent<HTMLInputElement>) {
+  async function selecionarArquivo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-
-    setImportando(true)
-    setImportResult(null)
     try {
       const XLSX = await import('xlsx')
       const buf = await file.arrayBuffer()
       const wb = XLSX.read(buf, { type: 'array' })
       const sheet = wb.Sheets[wb.SheetNames[0]]
-      // blankrows mantido em true (padrão) para preservar linhas em branco no array —
-      // sem isso, o índice de cada linha se desalinha do número real na planilha.
       const linhas = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 })
-      const itens = linhas
-        .slice(1) // pula o cabeçalho (linha 1)
-        .map((r, idx) => ({ linha: idx + 2, r })) // linha real na planilha, antes de filtrar em branco
-        .filter(({ r }) => r.some(c => c !== undefined && String(c).trim() !== ''))
-        .map(({ linha, r }) => ({
-          linha,
-          nome: String(r[0] ?? '').trim(),
-          categoria: r[1] ? String(r[1]).trim() : undefined,
-          caloriasKcal: Number(r[2]) || 0,
-          carboidratosG: Number(r[3]) || 0,
-          proteinasG: Number(r[4]) || 0,
-          gordurasG: Number(r[5]) || 0,
-        }))
-
-      if (itens.length === 0) {
-        toast.error('Nenhuma linha válida encontrada na planilha.')
+      if (linhas.length < 2) {
+        toast.error('A planilha precisa ter uma linha de cabeçalho e ao menos uma linha de dados.')
         return
       }
+      const cabecalho = (linhas[0] as any[]).map(c => String(c ?? '').trim())
+      setImportCabecalho(cabecalho)
+      setImportLinhasBrutas(linhas.slice(1))
+      setMapeamento(sugerirMapeamento(cabecalho))
+      setImportResult(null)
+      setMapeando(true)
+    } catch (e: any) {
+      toast.error(e.message ?? 'Erro ao ler a planilha.')
+    }
+  }
 
-      const resultado = await api.post<ImportResultado>('/alimentos/importar', { itens })
+  function cancelarMapeamento() {
+    setMapeando(false)
+    setImportCabecalho([])
+    setImportLinhasBrutas([])
+    setMapeamento(mapeamentoVazio())
+  }
+
+  // Linhas em branco descartadas depois de calcular a linha real (idx+2) — preserva o número correto mesmo com buracos no meio.
+  const itensImportacao = useMemo(() => {
+    return importLinhasBrutas
+      .map((r, idx) => ({ linha: idx + 2, r }))
+      .filter(({ r }) => r.some(c => c !== undefined && String(c).trim() !== ''))
+      .map(({ linha, r }) => construirItem(linha, r, mapeamento))
+  }, [importLinhasBrutas, mapeamento])
+
+  const mapeamentoCompleto = CAMPOS.filter(c => c.obrigatorio).every(c => mapeamento[c.chave] !== '')
+
+  function opcoesColuna(campoAtual: CampoAlimento) {
+    return importCabecalho.map((h, i) => ({
+      valor: i,
+      label: h ? `${h} (coluna ${i + 1})` : `Coluna ${i + 1} (sem cabeçalho)`,
+      usadaPorOutro: Object.entries(mapeamento).some(([k, v]) => k !== campoAtual && v === i),
+    }))
+  }
+
+  async function confirmarImportacao() {
+    if (!mapeamentoCompleto) {
+      toast.error('Selecione a coluna de todos os campos obrigatórios antes de importar.')
+      return
+    }
+    if (itensImportacao.length === 0) {
+      toast.error('Nenhuma linha de dado encontrada na planilha.')
+      return
+    }
+    setImportando(true)
+    try {
+      const resultado = await api.post<ImportResultado>('/alimentos/importar', { itens: itensImportacao })
       setImportResult(resultado)
       if (resultado.criados > 0) carregar(busca)
+      cancelarMapeamento()
 
       if (resultado.erros.length === 0) {
         toast.success(`${resultado.criados} alimento(s) importado(s) com sucesso!`)
@@ -164,7 +263,7 @@ export default function AdminAlimentos() {
         toast.warning(`${resultado.criados} de ${resultado.total} importados — ${resultado.erros.length} com erro.`)
       }
     } catch (e: any) {
-      toast.error(e.message ?? 'Erro ao ler a planilha.')
+      toast.error(e.message ?? 'Erro ao importar planilha.')
     } finally {
       setImportando(false)
     }
@@ -186,12 +285,11 @@ export default function AdminAlimentos() {
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={importando}
-            className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-200 font-medium text-sm px-3.5 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium text-sm px-3.5 py-2 rounded-lg transition-colors"
           >
-            <Upload size={15} /> {importando ? 'Importando...' : 'Importar planilha'}
+            <Upload size={15} /> Importar planilha
           </button>
-          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={importarArquivo} />
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={selecionarArquivo} />
           {!showForm && (
             <button
               onClick={() => setShowForm(true)}
@@ -202,6 +300,98 @@ export default function AdminAlimentos() {
           )}
         </div>
       </div>
+
+      {/* Etapa de mapeamento de colunas, antes de importar de verdade */}
+      {mapeando && (
+        <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 mb-6 space-y-5">
+          <div>
+            <h2 className="font-semibold text-sm text-zinc-200 uppercase tracking-wider">Confira o mapeamento de colunas</h2>
+            <p className="text-xs text-zinc-500 mt-1">
+              Sugerimos automaticamente pelo texto do cabeçalho — confira ou ajuste cada campo antes de importar.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {CAMPOS.map(campo => (
+              <div key={campo.chave}>
+                <label className="text-xs text-zinc-400 block mb-1">
+                  {campo.label}{campo.obrigatorio && <span className="text-red-400"> *</span>}
+                </label>
+                <select
+                  value={mapeamento[campo.chave]}
+                  onChange={e => setMapeamento(m => ({ ...m, [campo.chave]: e.target.value === '' ? '' : Number(e.target.value) }))}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-yellow-400"
+                >
+                  <option value="">— Não mapear —</option>
+                  {opcoesColuna(campo.chave).map(op => (
+                    <option key={op.valor} value={op.valor}>
+                      {op.label}{op.usadaPorOutro ? ' (já usada em outro campo)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <p className="text-xs text-zinc-500 mb-2">
+              Pré-visualização ({itensImportacao.length} linha{itensImportacao.length === 1 ? '' : 's'} encontrada{itensImportacao.length === 1 ? '' : 's'} na planilha)
+            </p>
+            <div className="border border-zinc-800 rounded-lg overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-zinc-500 uppercase tracking-wider">
+                    <th className="text-left font-medium px-3 py-2">Linha</th>
+                    <th className="text-left font-medium px-3 py-2">Nome</th>
+                    <th className="text-left font-medium px-3 py-2">Categoria</th>
+                    <th className="text-right font-medium px-3 py-2">Kcal</th>
+                    <th className="text-right font-medium px-3 py-2">Carb</th>
+                    <th className="text-right font-medium px-3 py-2">Prot</th>
+                    <th className="text-right font-medium px-3 py-2">Gord</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {itensImportacao.slice(0, 5).map(it => (
+                    <tr key={it.linha} className="border-b border-zinc-800/60 last:border-0">
+                      <td className="px-3 py-1.5 text-zinc-500">{it.linha}</td>
+                      <td className="px-3 py-1.5 text-zinc-100">{it.nome || <span className="text-red-400">(vazio)</span>}</td>
+                      <td className="px-3 py-1.5 text-zinc-400">{it.categoria || '—'}</td>
+                      <td className="px-3 py-1.5 text-right text-zinc-300">{it.caloriasKcal}</td>
+                      <td className="px-3 py-1.5 text-right text-zinc-300">{it.carboidratosG}</td>
+                      <td className="px-3 py-1.5 text-right text-zinc-300">{it.proteinasG}</td>
+                      <td className="px-3 py-1.5 text-right text-zinc-300">{it.gordurasG}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {itensImportacao.length > 5 && (
+                <p className="text-[11px] text-zinc-500 px-3 py-1.5">
+                  + {itensImportacao.length - 5} linha(s) restante(s) não mostrada(s) aqui.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end">
+            <button
+              type="button"
+              onClick={cancelarMapeamento}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors"
+            >
+              <X size={15} /> Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={confirmarImportacao}
+              disabled={!mapeamentoCompleto || importando || itensImportacao.length === 0}
+              className="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-zinc-900 font-semibold text-sm px-5 py-2 rounded-lg transition-colors"
+            >
+              <ArrowRight size={15} />
+              {importando ? 'Importando...' : `Confirmar e importar ${itensImportacao.length} alimento(s)`}
+            </button>
+          </div>
+        </div>
+      )}
 
       {importResult && (
         <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 mb-6 text-sm">
